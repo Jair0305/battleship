@@ -1,13 +1,13 @@
 package com.jair.battleship.battleshipbackend.models.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -21,5 +21,17 @@ public class Sala {
     private Long id;
 
     private String nombre;
-    private boolean disponible;
+    private boolean disponible = true;
+
+    @OneToMany(mappedBy = "sala")
+    private List<Jugador> jugadores = new ArrayList<>();
+
+    public Sala(Long id) {
+        this.id = id;
+    }
+
+    public Sala(String nombre, boolean disponible) {
+        this.nombre = nombre;
+        this.disponible = disponible;
+    }
 }

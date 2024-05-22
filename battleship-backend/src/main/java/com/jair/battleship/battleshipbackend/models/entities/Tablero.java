@@ -6,22 +6,25 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Entity
-@Getter
-@Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Jugador {
+@Getter
+@Setter
+public class Tablero {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String nombre;
-    private int puntuacion;
 
-    @ManyToOne
-    @JoinColumn(name = "sala_id")
-    private Sala sala;
 
-    @OneToOne(mappedBy = "jugador", cascade = CascadeType.ALL)
-    private Tablero tablero;
+    @OneToOne
+    @JoinColumn(name = "jugador_id")
+    private Jugador jugador;
+
+    @ElementCollection
+    private Map<String, Boolean> posiciones = new HashMap<>();
 }

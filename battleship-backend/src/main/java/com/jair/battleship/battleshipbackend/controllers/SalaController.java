@@ -29,3 +29,4 @@ public class SalaController {
         salaService.ocuparSala(id);
     }
 }
+ 
