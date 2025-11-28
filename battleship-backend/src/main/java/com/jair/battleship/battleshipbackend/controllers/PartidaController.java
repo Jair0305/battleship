@@ -73,4 +73,9 @@ public class PartidaController {
             @RequestParam(required = false) Long jugadorId) {
         return partidaService.obtenerEstadoPartida(partidaId, jugadorId);
     }
+
+    @PostMapping("/{partidaId}/revancha")
+    public void revancha(@PathVariable Long partidaId, @RequestParam Long jugadorId) {
+        partidaService.solicitarRevancha(partidaId, jugadorId);
+    }
 }

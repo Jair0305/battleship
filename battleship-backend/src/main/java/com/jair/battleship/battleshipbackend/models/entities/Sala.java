@@ -31,6 +31,12 @@ public class Sala {
     @Column(nullable = true)
     private Integer espectadores = 0;
 
+    @OneToOne
+    private Jugador jugador1;
+
+    @OneToOne
+    private Jugador jugador2;
+
     // @JsonIgnore - Removed to show players in lobby
     @OneToMany(mappedBy = "sala")
     private List<Jugador> jugadores = new ArrayList<>();
@@ -48,10 +54,10 @@ public class Sala {
             espectadores = 0;
         if (espectadores < 0)
             espectadores = 0;
-    }
 
-    public Sala(Long id) {
-        this.id = id;
+        // Ensure lists are not null
+        if (jugadores == null)
+            jugadores = new ArrayList<>();
     }
 
     public Sala(String nombre, boolean disponible) {

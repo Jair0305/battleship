@@ -28,4 +28,8 @@ public interface PartidaService {
     Map<String, Object> obtenerEstadoPartida(Long partidaId, Long jugadorId);
 
     Partida iniciarPartidaDesdeSala(Long salaId);
+
+    void solicitarRevancha(Long partidaId, Long jugadorId);
+
+    void rechazarRevancha(Long partidaId, Long jugadorId);
 }

@@ -1,16 +1,12 @@
 package com.jair.battleship.battleshipbackend.services;
 
 import com.jair.battleship.battleshipbackend.models.entities.Sala;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 
-@Service
 public interface SalaService {
 
     List<Sala> obtenerSalasDisponibles();
 
-    // Nuevo: listar todas
     List<Sala> obtenerTodas();
 
     Sala crearSala(String nombre);
@@ -19,7 +15,11 @@ public interface SalaService {
 
     Sala liberarSala(Long id);
 
-    void entrarEspectador(Long id);
+    Sala entrarEspectador(Long salaId);
 
-    void salirEspectador(Long id);
+    Sala salirEspectador(Long salaId);
+
+    Sala ocuparPuesto(Long salaId, Long jugadorId, int puesto);
+
+    Sala liberarPuesto(Long salaId, int puesto);
 }

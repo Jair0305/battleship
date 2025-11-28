@@ -7,6 +7,7 @@ import com.jair.battleship.battleshipbackend.repositories.*;
 import com.jair.battleship.battleshipbackend.services.PartidaService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -30,6 +31,19 @@ public class PartidaServiceImpl implements PartidaService {
     private EstadisticaJugadorRepository estadisticaJugadorRepository;
     @Autowired
     private SalaRepository salaRepository;
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+    @Autowired
+    private EspectadorRepository espectadorRepository;
+    @Autowired
+    private com.jair.battleship.battleshipbackend.services.SalaService salaService;
+
+    private void broadcastEvento(Long salaId) {
+        try {
+            messagingTemplate.convertAndSend("/topic/sala/" + salaId + "/evento", "UPDATE");
+        } catch (Exception ignored) {
+        }
+    }
 
     @Override
     public Partida crearPartida(Long salaId, Long hostJugadorId) {
@@ -62,7 +76,6 @@ public class PartidaServiceImpl implements PartidaService {
             throw new IllegalStateException("La partida ya tiene 2 jugadores");
         Jugador jugador = jugadorRepository.findById(jugadorId).orElseThrow();
 
-        // Si ya está unido, devolver
         Optional<Participacion> ya = participacionRepository.findByPartidaIdAndJugadorId(partidaId, jugadorId);
         if (ya.isPresent())
             return partida;
@@ -76,7 +89,6 @@ public class PartidaServiceImpl implements PartidaService {
         if (count + 1 == 2) {
             partida.setEstado(EstadoPartida.EN_CURSO);
             partida.setInicio(Instant.now());
-            // turno ya está en el host (orden 1)
         }
         return partidaRepository.save(partida);
     }
@@ -86,7 +98,6 @@ public class PartidaServiceImpl implements PartidaService {
         Partida partida = partidaRepository.findById(partidaId).orElseThrow();
         Jugador jugador = jugadorRepository.findById(jugadorId).orElseThrow();
 
-        // Buscar tablero específico de la partida, o uno disponible (sin partida)
         Optional<Tablero> existente = tableroRepository.findByJugadorIdAndPartidaId(jugadorId, partidaId);
         if (existente.isEmpty()) {
             existente = tableroRepository.findByJugadorIdAndPartidaIsNull(jugadorId);
@@ -142,17 +153,16 @@ public class PartidaServiceImpl implements PartidaService {
         d.setTimestamp(Instant.now());
         disparoRepository.save(d);
 
-        // puntos por impacto
         if (acierto)
             sumarPuntos(atacantePar.getJugador().getId(), 1);
         actualizarStatsDisparo(atacantePar.getJugador().getId(), acierto);
 
-        // ¿victoria?
         boolean victoria = todasPosicionesBarcoImpactadas(tableroDefensor);
         if (victoria) {
             partida.setEstado(EstadoPartida.FINALIZADA);
             partida.setFin(Instant.now());
             partida.setGanador(atacantePar.getJugador());
+            partida.setRematchDeadline(Instant.now().plusSeconds(30)); // 30 seconds for rematch
             partidaRepository.save(partida);
 
             atacantePar.setResultado(ResultadoParticipacion.GANO);
@@ -160,12 +170,12 @@ public class PartidaServiceImpl implements PartidaService {
             participacionRepository.save(atacantePar);
             participacionRepository.save(defensorPar);
 
-            // bonus por victoria
             sumarPuntos(atacantePar.getJugador().getId(), 50);
             actualizarStatsVictoria(atacantePar.getJugador().getId(), defensorPar.getJugador().getId());
+
+            broadcastEvento(partida.getSala().getId());
             return true;
         } else {
-            // cambiar turno siempre (regla estándar)
             partida.setTurnoActualJugadorId(defensorPar.getJugador().getId());
             partidaRepository.save(partida);
         }
@@ -186,17 +196,14 @@ public class PartidaServiceImpl implements PartidaService {
         atacadas.remove(d.getPosicion());
         tableroRepository.save(tableroDef);
 
-        // revertir puntos y stats
         if (d.isAcierto())
             restarPuntos(d.getAtacante().getId(), 1);
         revertirStatsDisparo(d.getAtacante().getId(), d.isAcierto());
 
-        // si estaba finalizada por ese disparo, reabrir
         if (partida.getEstado() == EstadoPartida.FINALIZADA && Objects.equals(partida.getGanador(), d.getAtacante())) {
             partida.setEstado(EstadoPartida.EN_CURSO);
             partida.setFin(null);
             partida.setGanador(null);
-            // revertir resultados
             Participacion at = participacionRepository.findByPartidaIdAndJugadorId(partidaId, d.getAtacante().getId())
                     .orElseThrow();
             Participacion df = participacionRepository.findByPartidaIdAndJugadorId(partidaId, d.getDefensor().getId())
@@ -205,16 +212,12 @@ public class PartidaServiceImpl implements PartidaService {
             df.setResultado(null);
             participacionRepository.save(at);
             participacionRepository.save(df);
-            // revertir stats victoria/derrota
             revertirStatsVictoria(d.getAtacante().getId(), d.getDefensor().getId());
-            // revertir bonus victoria
             restarPuntos(d.getAtacante().getId(), 50);
         }
 
-        // turno vuelve al atacante que deshizo
         partida.setTurnoActualJugadorId(d.getAtacante().getId());
         partidaRepository.save(partida);
-
         disparoRepository.delete(d);
     }
 
@@ -224,6 +227,8 @@ public class PartidaServiceImpl implements PartidaService {
         partida.setEstado(EstadoPartida.CANCELADA);
         partida.setFin(Instant.now());
         partidaRepository.save(partida);
+        if (partida.getSala() != null)
+            broadcastEvento(partida.getSala().getId());
     }
 
     @Override
@@ -233,22 +238,20 @@ public class PartidaServiceImpl implements PartidaService {
         partida.setFin(Instant.now());
         partida.setGanador(null);
         partidaRepository.save(partida);
-        // marcar participaciones
         for (Participacion p : participacionRepository.findByPartidaId(partidaId)) {
             p.setResultado(ResultadoParticipacion.EMPATE);
             participacionRepository.save(p);
             sumarPuntos(p.getJugador().getId(), 20);
             actualizarStatsEmpate(p.getJugador().getId());
         }
+        if (partida.getSala() != null)
+            broadcastEvento(partida.getSala().getId());
     }
 
     @Override
     public Partida obtenerPartida(Long partidaId) {
         return partidaRepository.findById(partidaId).orElseThrow();
     }
-
-    @Autowired
-    private EspectadorRepository espectadorRepository;
 
     @Override
     public void agregarEspectador(Long partidaId, Long jugadorId) {
@@ -274,6 +277,7 @@ public class PartidaServiceImpl implements PartidaService {
     @Override
     public Map<String, Object> obtenerEstadoPartida(Long partidaId, Long jugadorId) {
         Partida partida = partidaRepository.findById(partidaId).orElseThrow();
+        checkRematchTimeout(partida);
         Map<String, Object> dto = new HashMap<>();
         dto.put("partidaId", partida.getId());
         dto.put("estado", partida.getEstado().name());
@@ -281,7 +285,6 @@ public class PartidaServiceImpl implements PartidaService {
         dto.put("ganadorId", partida.getGanador() == null ? null : partida.getGanador().getId());
 
         if (jugadorId != null) {
-            // Tablero propio y del oponente (vista de jugador)
             Participacion propia = participacionRepository.findByPartidaIdAndJugadorId(partidaId, jugadorId)
                     .orElse(null);
             if (propia != null) {
@@ -299,10 +302,6 @@ public class PartidaServiceImpl implements PartidaService {
                 });
             }
         } else {
-            // Vista de espectador: ver impactos en ambos tableros
-            // No mostramos barcos no impactados para evitar trampas (o podríamos mostrarlos
-            // si es "god mode")
-            // Por ahora, solo mostramos lo que se ve públicamente (impactos)
             List<Participacion> partes = participacionRepository.findByPartidaId(partidaId);
             Map<Long, Map<String, Boolean>> tablerosPublicos = new HashMap<>();
             for (Participacion p : partes) {
@@ -314,7 +313,6 @@ public class PartidaServiceImpl implements PartidaService {
             dto.put("tablerosPublicos", tablerosPublicos);
         }
 
-        // Información de jugadores (ID -> Nombre)
         List<Participacion> todasPartes = participacionRepository.findByPartidaId(partidaId);
         Map<Long, String> jugadoresMap = new HashMap<>();
         for (Participacion p : todasPartes) {
@@ -322,7 +320,6 @@ public class PartidaServiceImpl implements PartidaService {
         }
         dto.put("jugadores", jugadoresMap);
 
-        // Historial compacto
         List<Disparo> disparos = disparoRepository.findByPartidaIdOrderByTimestampAsc(partidaId);
         List<Map<String, Object>> hist = new ArrayList<>();
         for (Disparo d : disparos) {
@@ -335,6 +332,11 @@ public class PartidaServiceImpl implements PartidaService {
             hist.add(item);
         }
         dto.put("historial", hist);
+        dto.put("rematchRequestJ1", partida.isRematchRequestJ1());
+        dto.put("rematchRequestJ2", partida.isRematchRequestJ2());
+        if (partida.getRematchDeadline() != null) {
+            dto.put("rematchDeadline", partida.getRematchDeadline().toEpochMilli());
+        }
         return dto;
     }
 
@@ -349,7 +351,7 @@ public class PartidaServiceImpl implements PartidaService {
     private boolean todasPosicionesBarcoImpactadas(Tablero tablero) {
         Map<String, Boolean> barcos = tablero.getPosicionesBarcos();
         if (barcos.isEmpty())
-            return false; // no hay barcos => no victoria
+            return false;
         Map<String, Boolean> atacadas = tablero.getPosicionesAtacadas();
         for (Map.Entry<String, Boolean> e : barcos.entrySet()) {
             if (Boolean.TRUE.equals(e.getValue())) {
@@ -374,7 +376,6 @@ public class PartidaServiceImpl implements PartidaService {
                     s.setImpactos(0);
                     s.setFallos(0);
                     s.setBarcosHundidos(0);
-
                     return estadisticaJugadorRepository.save(s);
                 });
     }
@@ -438,31 +439,24 @@ public class PartidaServiceImpl implements PartidaService {
 
     @Override
     public Partida iniciarPartidaDesdeSala(Long salaId) {
-        // Verificar si ya existe partida activa
         List<Partida> activas = partidaRepository.findBySalaIdAndEstado(salaId, EstadoPartida.EN_CURSO);
         if (!activas.isEmpty())
             return activas.get(0);
-        List<Partida> creadas = partidaRepository.findBySalaIdAndEstado(salaId, EstadoPartida.CREADA);
-        if (!creadas.isEmpty())
-            return creadas.get(0);
 
         Sala sala = salaRepository.findById(salaId).orElseThrow();
-        List<Jugador> jugadores = sala.getJugadores();
-        if (jugadores.size() < 2)
-            throw new IllegalStateException("Se necesitan 2 jugadores para iniciar");
+        Jugador host = sala.getJugador1();
+        Jugador challenger = sala.getJugador2();
 
-        Jugador host = jugadores.get(0);
-        Jugador challenger = jugadores.get(1);
+        if (host == null || challenger == null)
+            throw new IllegalStateException("Se necesitan 2 jugadores en los puestos para iniciar");
 
-        // Crear partida
         Partida partida = new Partida();
         partida.setSala(sala);
-        partida.setEstado(EstadoPartida.EN_CURSO); // Se inicia directamente en fase de preparación/juego
+        partida.setEstado(EstadoPartida.EN_CURSO);
         partida.setInicio(Instant.now());
         partida.setTurnoActualJugadorId(host.getId());
         partida = partidaRepository.save(partida);
 
-        // Participación Host
         Participacion p1 = new Participacion();
         p1.setPartida(partida);
         p1.setJugador(host);
@@ -470,7 +464,6 @@ public class PartidaServiceImpl implements PartidaService {
         p1.setPuntosObtenidos(0);
         participacionRepository.save(p1);
 
-        // Participación Challenger
         Participacion p2 = new Participacion();
         p2.setPartida(partida);
         p2.setJugador(challenger);
@@ -478,6 +471,69 @@ public class PartidaServiceImpl implements PartidaService {
         p2.setPuntosObtenidos(0);
         participacionRepository.save(p2);
 
+        broadcastEvento(salaId);
         return partida;
+    }
+
+    @Override
+    public void solicitarRevancha(Long partidaId, Long jugadorId) {
+        Partida partida = partidaRepository.findById(partidaId).orElseThrow();
+        if (partida.getEstado() != EstadoPartida.FINALIZADA)
+            return;
+
+        checkRematchTimeout(partida);
+        if (partida.getRematchDeadline() != null && Instant.now().isAfter(partida.getRematchDeadline())) {
+            return; // Timeout
+        }
+
+        Participacion p = participacionRepository.findByPartidaIdAndJugadorId(partidaId, jugadorId).orElseThrow();
+        if (p.getOrden() == 1) {
+            partida.setRematchRequestJ1(true);
+        } else {
+            partida.setRematchRequestJ2(true);
+        }
+        partidaRepository.save(partida);
+        broadcastEvento(partida.getSala().getId());
+
+        if (partida.isRematchRequestJ1() && partida.isRematchRequestJ2()) {
+            iniciarPartidaDesdeSala(partida.getSala().getId());
+        }
+    }
+
+    @Override
+    public void rechazarRevancha(Long partidaId, Long jugadorId) {
+        Partida partida = partidaRepository.findById(partidaId).orElseThrow();
+        if (partida.getEstado() != EstadoPartida.FINALIZADA)
+            return;
+
+        // Kick the player from seat
+        Sala sala = partida.getSala();
+        if (sala != null) {
+            Participacion p = participacionRepository.findByPartidaIdAndJugadorId(partidaId, jugadorId).orElse(null);
+            if (p != null) {
+                salaService.liberarPuesto(sala.getId(), p.getOrden());
+            }
+        }
+        broadcastEvento(partida.getSala().getId());
+    }
+
+    private void checkRematchTimeout(Partida partida) {
+        if (partida.getEstado() == EstadoPartida.FINALIZADA && partida.getRematchDeadline() != null) {
+            if (Instant.now().isAfter(partida.getRematchDeadline())) {
+                // Timeout reached. Kick anyone who hasn't accepted? Or just kick both to be
+                // safe/fair.
+                // Requirement: "Implement the logic for a player to be 'kicked from their seat'
+                // (become a spectator) if a rematch is declined or times out."
+                // Let's kick both to free the room for new players or re-selection.
+                Sala sala = partida.getSala();
+                if (sala != null) {
+                    salaService.liberarPuesto(sala.getId(), 1);
+                    salaService.liberarPuesto(sala.getId(), 2);
+                }
+                partida.setRematchDeadline(null); // Clear deadline so we don't keep kicking
+                partidaRepository.save(partida);
+                broadcastEvento(sala.getId());
+            }
+        }
     }
 }

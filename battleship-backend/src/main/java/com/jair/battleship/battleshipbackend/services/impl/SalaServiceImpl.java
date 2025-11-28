@@ -2,6 +2,7 @@ package com.jair.battleship.battleshipbackend.services.impl;
 
 import com.jair.battleship.battleshipbackend.models.entities.Sala;
 import com.jair.battleship.battleshipbackend.repositories.SalaRepository;
+import com.jair.battleship.battleshipbackend.repositories.JugadorRepository;
 import com.jair.battleship.battleshipbackend.services.SalaService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,9 @@ public class SalaServiceImpl implements SalaService {
     private SalaRepository salaRepository;
 
     @Autowired
+    private JugadorRepository jugadorRepository;
+
+    @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
     public List<Sala> obtenerSalasDisponibles() {
@@ -36,81 +40,101 @@ public class SalaServiceImpl implements SalaService {
         sala.setDisponible(true);
         sala.setOcupacion(0);
         Sala saved = salaRepository.save(sala);
-        // notificar creación
-        try {
-            messagingTemplate.convertAndSend("/topic/salas", obtenerTodas());
-        } catch (Exception ignored) {
-        }
+        broadcastUpdate();
         return saved;
     }
 
     @Override
     public Sala ocuparSala(Long id) {
-        Sala sala = salaRepository.findById(id).orElseThrow();
-        Integer oc = sala.getOcupacion();
-        int ocupacion = (oc == null ? 0 : oc);
-
-        if (ocupacion >= 2) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La sala ya está llena (2/2)");
-        }
-
-        ocupacion++;
-        sala.setOcupacion(ocupacion);
-        sala.setDisponible(ocupacion < 2);
-        Sala saved = salaRepository.save(sala);
-        // notificar cambio de salas
-        try {
-            messagingTemplate.convertAndSend("/topic/salas", obtenerTodas());
-        } catch (Exception ignored) {
-        }
-        return saved;
+        // Deprecated or mapped to seat logic if needed, but keeping for compatibility
+        // For now, just return the sala
+        return salaRepository.findById(id).orElseThrow();
     }
 
     @Override
     public Sala liberarSala(Long id) {
-        Sala sala = salaRepository.findById(id).orElseThrow();
-        Integer oc = sala.getOcupacion();
-        int ocupacion = (oc == null ? 0 : oc);
-
-        if (ocupacion > 0) {
-            ocupacion--;
-        }
-        sala.setOcupacion(Math.max(0, ocupacion));
-        sala.setDisponible(ocupacion < 2);
-        Sala saved = salaRepository.save(sala);
-        // notificar cambio de salas
-        try {
-            messagingTemplate.convertAndSend("/topic/salas", obtenerTodas());
-        } catch (Exception ignored) {
-        }
-        return saved;
+        // Deprecated
+        return salaRepository.findById(id).orElseThrow();
     }
 
     @Override
-    public void entrarEspectador(Long id) {
+    public Sala entrarEspectador(Long id) {
         Sala sala = salaRepository.findById(id).orElseThrow();
         Integer esp = sala.getEspectadores();
         int espectadores = (esp == null ? 0 : esp);
         sala.setEspectadores(espectadores + 1);
-        salaRepository.save(sala);
-        try {
-            messagingTemplate.convertAndSend("/topic/salas", obtenerTodas());
-        } catch (Exception ignored) {
-        }
+        Sala saved = salaRepository.save(sala);
+        broadcastUpdate();
+        return saved;
     }
 
     @Override
-    public void salirEspectador(Long id) {
+    public Sala salirEspectador(Long id) {
         Sala sala = salaRepository.findById(id).orElseThrow();
         Integer esp = sala.getEspectadores();
         int espectadores = (esp == null ? 0 : esp);
         if (espectadores > 0) {
             sala.setEspectadores(espectadores - 1);
-            salaRepository.save(sala);
-            try {
-                messagingTemplate.convertAndSend("/topic/salas", obtenerTodas());
-            } catch (Exception ignored) {
+            sala = salaRepository.save(sala);
+            broadcastUpdate();
+        }
+        return sala;
+    }
+
+    @Override
+    public Sala ocuparPuesto(Long salaId, Long jugadorId, int puesto) {
+        Sala sala = salaRepository.findById(salaId).orElseThrow();
+        com.jair.battleship.battleshipbackend.models.entities.Jugador jugador = jugadorRepository.findById(jugadorId)
+                .orElseThrow();
+
+        if (puesto == 1) {
+            if (sala.getJugador1() != null && !sala.getJugador1().getId().equals(jugadorId)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Puesto 1 ocupado");
             }
+            sala.setJugador1(jugador);
+        } else if (puesto == 2) {
+            if (sala.getJugador2() != null && !sala.getJugador2().getId().equals(jugadorId)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Puesto 2 ocupado");
+            }
+            sala.setJugador2(jugador);
+        } else {
+            throw new IllegalArgumentException("Puesto inválido (1 o 2)");
+        }
+
+        updateOcupacion(sala);
+        Sala saved = salaRepository.save(sala);
+        broadcastUpdate();
+        return saved;
+    }
+
+    @Override
+    public Sala liberarPuesto(Long salaId, int puesto) {
+        Sala sala = salaRepository.findById(salaId).orElseThrow();
+        if (puesto == 1) {
+            sala.setJugador1(null);
+        } else if (puesto == 2) {
+            sala.setJugador2(null);
+        }
+        updateOcupacion(sala);
+        Sala saved = salaRepository.save(sala);
+        broadcastUpdate();
+        return saved;
+    }
+
+    private void updateOcupacion(Sala sala) {
+        int count = 0;
+        if (sala.getJugador1() != null)
+            count++;
+        if (sala.getJugador2() != null)
+            count++;
+        sala.setOcupacion(count);
+        sala.setDisponible(count < 2);
+    }
+
+    private void broadcastUpdate() {
+        try {
+            messagingTemplate.convertAndSend("/topic/salas", obtenerTodas());
+        } catch (Exception ignored) {
         }
     }
 
@@ -124,10 +148,7 @@ public class SalaServiceImpl implements SalaService {
             Sala sala3 = new Sala("Sala 3", true);
             sala3.setOcupacion(0);
             salaRepository.saveAll(Arrays.asList(sala1, sala2, sala3));
-            try {
-                messagingTemplate.convertAndSend("/topic/salas", obtenerTodas());
-            } catch (Exception ignored) {
-            }
+            broadcastUpdate();
         }
     }
 }

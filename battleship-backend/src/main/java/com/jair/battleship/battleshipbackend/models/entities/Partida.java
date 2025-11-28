@@ -32,6 +32,11 @@ public class Partida {
     // turnoActual: id del jugador que debe jugar
     private Long turnoActualJugadorId;
 
+    private boolean rematchRequestJ1 = false;
+    private boolean rematchRequestJ2 = false;
+
+    private Instant rematchDeadline;
+
     @ManyToOne
     @JoinColumn(name = "sala_id")
     private Sala sala;

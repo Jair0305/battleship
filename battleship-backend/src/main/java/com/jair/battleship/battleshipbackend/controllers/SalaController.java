@@ -40,12 +40,22 @@ public class SalaController {
     }
 
     @PutMapping("/{id}/entrarEspectador")
-    public void entrarEspectador(@PathVariable Long id) {
-        salaService.entrarEspectador(id);
+    public Sala entrarEspectador(@PathVariable Long id) {
+        return salaService.entrarEspectador(id);
     }
 
     @PutMapping("/{id}/salirEspectador")
-    public void salirEspectador(@PathVariable Long id) {
-        salaService.salirEspectador(id);
+    public Sala salirEspectador(@PathVariable Long id) {
+        return salaService.salirEspectador(id);
+    }
+
+    @PutMapping("/{id}/puesto/{puesto}/ocupar")
+    public Sala ocuparPuesto(@PathVariable Long id, @PathVariable int puesto, @RequestParam Long jugadorId) {
+        return salaService.ocuparPuesto(id, jugadorId, puesto);
+    }
+
+    @PutMapping("/{id}/puesto/{puesto}/liberar")
+    public Sala liberarPuesto(@PathVariable Long id, @PathVariable int puesto) {
+        return salaService.liberarPuesto(id, puesto);
     }
 }

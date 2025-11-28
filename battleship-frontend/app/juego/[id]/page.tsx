@@ -15,6 +15,9 @@ interface Sala {
     nombre: string;
     disponible: boolean;
     ocupacion?: number;
+    jugador1?: { id: number; nombre: string; } | null;
+    jugador2?: { id: number; nombre: string; } | null;
+    espectadores?: number;
 }
 
 interface WSDisparoMsg {
@@ -76,6 +79,14 @@ export default function TableroPage() {
 
     const [misBarcosMap, setMisBarcosMap] = useState<Record<string, boolean>>({});
     const [turnoId, setTurnoId] = useState<number | null>(null);
+
+    // New state for rematch and game over
+    const [rematchRequestJ1, setRematchRequestJ1] = useState(false);
+    const [rematchRequestJ2, setRematchRequestJ2] = useState(false);
+    const [ganadorId, setGanadorId] = useState<number | null>(null);
+    const [estadoPartida, setEstadoPartida] = useState<string>('');
+    const [rematchDeadline, setRematchDeadline] = useState<number | null>(null);
+
     const [partidaId, setPartidaId] = useState<number | null>(() => {
         try {
             const raw = typeof window !== 'undefined' ? localStorage.getItem(`bship:partidaId:${params.id}`) : null;
@@ -288,6 +299,11 @@ export default function TableroPage() {
             const { data } = await axios.get(`${API_BASE}/api/partidas/${p}/estado`, { params: paramsReq });
 
             setTurnoId(data.turnoActualJugadorId ?? null);
+            setGanadorId(data.ganadorId ?? null);
+            setEstadoPartida(data.estado || '');
+            setRematchRequestJ1(!!data.rematchRequestJ1);
+            setRematchRequestJ2(!!data.rematchRequestJ2);
+            setRematchDeadline(data.rematchDeadline ?? null);
 
             if (data.jugadores) {
                 setJugadoresMap(data.jugadores);
@@ -368,7 +384,7 @@ export default function TableroPage() {
         let stop = false;
 
         const fetchSala = async () => {
-            if (started) return;
+            // Always fetch sala info to update seats
             try {
                 const { data } = await axios.get<Sala[]>(`${API_BASE}/api/sala/todas`);
                 const encontrada = data.find(s => String(s.id) === String(params.id));
@@ -389,7 +405,7 @@ export default function TableroPage() {
             stop = true;
             clearInterval(intId);
         };
-    }, [params?.id, started]);
+    }, [params?.id]);
 
     useEffect(() => {
         if (!params?.id) return;
@@ -423,6 +439,15 @@ export default function TableroPage() {
                         const body = JSON.parse(msg.body);
                         setChatHistory(prev => [...prev, { ...body, receivedAt: Date.now() }]);
                     } catch { }
+                });
+                // NEW: Subscribe to generic events (rematch, game start, seat changes)
+                client.subscribe(`/topic/sala/${params.id}/evento`, () => {
+                    refreshEstado().catch(() => { });
+                    // Also refresh room info to see seat changes
+                    axios.get<Sala[]>(`${API_BASE}/api/sala/todas`).then(({ data }) => {
+                        const encontrada = data.find(s => String(s.id) === String(params.id));
+                        if (encontrada) setSala(encontrada);
+                    }).catch(() => { });
                 });
             },
             onStompError: () => setWsConectado(false),
@@ -638,9 +663,48 @@ export default function TableroPage() {
         setPosicionDisparo(key);
     };
 
+    const ocuparPuesto = async (puesto: number) => {
+        if (!jugadorId) return;
+        try {
+            await axios.put(`${API_BASE}/api/sala/${params.id}/puesto/${puesto}/ocupar`, null, {
+                params: { jugadorId }
+            });
+            // The event subscription will refresh the UI
+        } catch (e) {
+            setError('No se pudo ocupar el puesto');
+        }
+    };
 
+    const liberarPuesto = async (puesto: number) => {
+        try {
+            await axios.put(`${API_BASE}/api/sala/${params.id}/puesto/${puesto}/liberar`);
+            // The event subscription will refresh the UI
+        } catch (e) {
+            setError('No se pudo liberar el puesto');
+        }
+    };
+
+    const solicitarRevancha = async () => {
+        if (!partidaId || !jugadorId) return;
+        try {
+            await axios.post(`${API_BASE}/api/partidas/${partidaId}/revancha`, null, {
+                params: { jugadorId }
+            });
+        } catch (e) {
+            setError('Error al solicitar revancha');
+        }
+    };
 
     const remainingSec = deadline ? Math.max(0, Math.floor((deadline - now) / 1000)) : null;
+    const rematchSec = rematchDeadline ? Math.max(0, Math.floor((rematchDeadline - now) / 1000)) : null;
+
+    // Helper to determine if I am in a seat
+    const miPuesto = useMemo(() => {
+        if (!sala || !jugadorId) return 0;
+        if (sala.jugador1?.id === jugadorId) return 1;
+        if (sala.jugador2?.id === jugadorId) return 2;
+        return 0;
+    }, [sala, jugadorId]);
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-4 md:p-8 font-sans">
@@ -670,6 +734,42 @@ export default function TableroPage() {
                         Salir de la Sala
                     </button>
                 </div>
+
+                {/* Seat Selection UI (if not started and not playing) */}
+                {!started && !isSpectator && (
+                    <div className="mb-8 grid grid-cols-2 gap-4 max-w-2xl mx-auto">
+                        {[1, 2].map(puesto => {
+                            const ocupante = puesto === 1 ? sala?.jugador1 : sala?.jugador2;
+                            const esMio = miPuesto === puesto;
+                            return (
+                                <div key={puesto} className={`p-6 rounded-xl border-2 ${esMio ? 'border-blue-500 bg-blue-500/10' : 'border-slate-700 bg-slate-800/50'} flex flex-col items-center gap-4`}>
+                                    <div className="text-xl font-bold">Puesto {puesto}</div>
+                                    {ocupante ? (
+                                        <div className="flex flex-col items-center">
+                                            <div className="w-12 h-12 rounded-full bg-slate-600 flex items-center justify-center mb-2">
+                                                <span className="text-xl">👤</span>
+                                            </div>
+                                            <span className="font-medium">{ocupante.nombre}</span>
+                                            {esMio && (
+                                                <button onClick={() => liberarPuesto(puesto)} className="mt-2 text-xs text-red-400 hover:text-red-300">
+                                                    Levantarse
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => ocuparPuesto(puesto)}
+                                            disabled={miPuesto !== 0}
+                                            className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Sentarse
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {!started && !isSpectator && (
                     <div className="glass-card rounded-xl p-8 text-center space-y-6 max-w-2xl mx-auto">
@@ -988,6 +1088,54 @@ export default function TableroPage() {
                         </form>
                     </div>
                 </div>
+
+                {/* Game Over / Rematch UI */}
+                {estadoPartida === 'FINALIZADA' && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                        <div className="bg-slate-900 border border-slate-700 p-8 rounded-2xl max-w-md w-full text-center space-y-6 shadow-2xl">
+                            <h2 className="text-4xl font-black text-white mb-2">
+                                {ganadorId === jugadorId ? '¡VICTORIA!' : 'DERROTA'}
+                            </h2>
+                            <div className="text-slate-400">
+                                {ganadorId === jugadorId ? 'Has dominado los mares.' : 'Mejor suerte la próxima vez.'}
+                            </div>
+                            {rematchSec !== null && (
+                                <div className="text-2xl font-bold text-yellow-400 animate-pulse">
+                                    Revancha expira en: {rematchSec}s
+                                </div>
+                            )}
+
+                            <div className="flex flex-col gap-3">
+                                {!isSpectator && (
+                                    <>
+                                        <button
+                                            onClick={solicitarRevancha}
+                                            disabled={rematchRequestJ1 && miPuesto === 1 || rematchRequestJ2 && miPuesto === 2}
+                                            className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all transform hover:scale-105"
+                                        >
+                                            {(miPuesto === 1 && rematchRequestJ1) || (miPuesto === 2 && rematchRequestJ2)
+                                                ? 'Esperando oponente...'
+                                                : 'Solicitar Revancha'}
+                                        </button>
+                                        <button
+                                            onClick={() => liberarPuesto(miPuesto)}
+                                            className="w-full py-3 rounded-lg border border-slate-600 hover:bg-slate-800 text-slate-300 font-medium transition-colors"
+                                        >
+                                            Dejar Puesto
+                                        </button>
+                                    </>
+                                )}
+                                <button
+                                    onClick={() => router.push('/')}
+                                    className="w-full py-2 text-slate-500 hover:text-slate-400 text-sm"
+                                >
+                                    Volver al Menú
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
             </div>
         </div>
     );
