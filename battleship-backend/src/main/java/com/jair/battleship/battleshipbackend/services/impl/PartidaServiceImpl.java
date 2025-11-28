@@ -130,7 +130,7 @@ public class PartidaServiceImpl implements PartidaService {
             throw new IllegalStateException("Esa posición ya fue atacada");
         }
         boolean acierto = Boolean.TRUE.equals(tableroDefensor.getPosicionesBarcos().get(posicion));
-        atacadas.put(posicion, true);
+        atacadas.put(posicion, acierto);
         tableroRepository.save(tableroDefensor);
 
         Disparo d = new Disparo();

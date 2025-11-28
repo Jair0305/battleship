@@ -86,6 +86,34 @@ public class SalaServiceImpl implements SalaService {
         return saved;
     }
 
+    @Override
+    public void entrarEspectador(Long id) {
+        Sala sala = salaRepository.findById(id).orElseThrow();
+        Integer esp = sala.getEspectadores();
+        int espectadores = (esp == null ? 0 : esp);
+        sala.setEspectadores(espectadores + 1);
+        salaRepository.save(sala);
+        try {
+            messagingTemplate.convertAndSend("/topic/salas", obtenerTodas());
+        } catch (Exception ignored) {
+        }
+    }
+
+    @Override
+    public void salirEspectador(Long id) {
+        Sala sala = salaRepository.findById(id).orElseThrow();
+        Integer esp = sala.getEspectadores();
+        int espectadores = (esp == null ? 0 : esp);
+        if (espectadores > 0) {
+            sala.setEspectadores(espectadores - 1);
+            salaRepository.save(sala);
+            try {
+                messagingTemplate.convertAndSend("/topic/salas", obtenerTodas());
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
     @PostConstruct
     public void init() {
         if (salaRepository.count() == 0) {

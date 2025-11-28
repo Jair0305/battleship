@@ -38,4 +38,14 @@ public class SalaController {
     public Sala liberarSala(@PathVariable Long id) {
         return salaService.liberarSala(id);
     }
+
+    @PutMapping("/{id}/entrarEspectador")
+    public void entrarEspectador(@PathVariable Long id) {
+        salaService.entrarEspectador(id);
+    }
+
+    @PutMapping("/{id}/salirEspectador")
+    public void salirEspectador(@PathVariable Long id) {
+        salaService.salirEspectador(id);
+    }
 }

@@ -255,12 +255,29 @@ export default function TableroPage() {
     }, [isSpectator, jugadorId, partidaId]);
 
     useEffect(() => {
-        if (isSpectator || !jugadorId) return;
-        const handleBeforeUnload = () => {
-            navigator.sendBeacon(`${API_BASE}/api/sala/${params.id}/liberar`);
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+        if (!params?.id) return;
+
+        if (isSpectator) {
+            // Registrar entrada de espectador
+            axios.put(`${API_BASE}/api/sala/${params.id}/entrarEspectador`).catch(() => { });
+
+            const handleUnload = () => {
+                navigator.sendBeacon(`${API_BASE}/api/sala/${params.id}/salirEspectador`);
+            };
+            window.addEventListener('beforeunload', handleUnload);
+            return () => {
+                window.removeEventListener('beforeunload', handleUnload);
+                axios.put(`${API_BASE}/api/sala/${params.id}/salirEspectador`).catch(() => { });
+            };
+        } else if (jugadorId) {
+            const handleBeforeUnload = () => {
+                // Solo liberar si NO ha empezado la partida o si explícitamente se quiere salir (manejado en salirSala)
+                // Si recarga la página, NO liberar para permitir reconexión
+                // navigator.sendBeacon(`${API_BASE}/api/sala/${params.id}/liberar`); 
+            };
+            window.addEventListener('beforeunload', handleBeforeUnload);
+            return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+        }
     }, [isSpectator, jugadorId, params?.id]);
 
     const refreshEstado = useCallback(async (pid?: number | null) => {
@@ -434,20 +451,24 @@ export default function TableroPage() {
         fetchEstado();
     }, [params?.id, wsConectado]);
 
+    const [spectatorName, setSpectatorName] = useState<string>('');
+
+    useEffect(() => {
+        if (isSpectator) {
+            let name = localStorage.getItem('bship:spectatorName');
+            if (!name) {
+                name = `Espectador ${Math.floor(Math.random() * 10000)}`;
+                localStorage.setItem('bship:spectatorName', name);
+            }
+            setSpectatorName(name);
+        }
+    }, [isSpectator]);
+
     const sendChat = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!chatMsg.trim()) return;
 
-        let senderName = (jugadorId && jugadoresMap[jugadorId]) || (isSpectator ? 'Espectador' : `Jugador ${jugadorId}`);
-        if (isSpectator) {
-            const storedUser = localStorage.getItem('bship:user');
-            if (storedUser) {
-                try {
-                    const u = JSON.parse(storedUser);
-                    senderName = u.username;
-                } catch { }
-            }
-        }
+        let senderName = (jugadorId && jugadoresMap[jugadorId]) || (isSpectator ? spectatorName : `Jugador ${jugadorId}`);
 
         try {
             await axios.post(`${API_BASE}/api/chat/${params.id}`, {
@@ -769,7 +790,7 @@ export default function TableroPage() {
                                                     }
                                                 } else {
                                                     isShip = !!misBarcosMap[key] || placedCells.has(key);
-                                                    if (receivedShots[key]) {
+                                                    if (receivedShots[key] !== undefined) {
                                                         if (isShip) isHit = true;
                                                         else isMiss = true;
                                                     }
@@ -935,7 +956,7 @@ export default function TableroPage() {
                                 </div>
                             )}
                             {chatHistory.map((msg, idx) => {
-                                const isMe = msg.sender === ((jugadorId && jugadoresMap[jugadorId]) || (isSpectator ? 'Espectador' : `Jugador ${jugadorId}`));
+                                const isMe = msg.sender === ((jugadorId && jugadoresMap[jugadorId]) || (isSpectator ? spectatorName : `Jugador ${jugadorId}`));
                                 return (
                                     <div key={idx} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                                         <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${isMe ? 'bg-blue-600/20 text-blue-100 rounded-tr-none' : 'bg-slate-700/50 text-slate-200 rounded-tl-none'}`}>

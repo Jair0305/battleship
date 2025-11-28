@@ -18,4 +18,8 @@ public interface SalaService {
     Sala ocuparSala(Long id);
 
     Sala liberarSala(Long id);
+
+    void entrarEspectador(Long id);
+
+    void salirEspectador(Long id);
 }

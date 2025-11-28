@@ -28,6 +28,9 @@ public class Sala {
     @Column(nullable = true) // tolerar datos antiguos con NULL; normalizamos en @PrePersist/@PreUpdate
     private Integer ocupacion = 0;
 
+    @Column(nullable = true)
+    private Integer espectadores = 0;
+
     // @JsonIgnore - Removed to show players in lobby
     @OneToMany(mappedBy = "sala")
     private List<Jugador> jugadores = new ArrayList<>();
@@ -35,9 +38,16 @@ public class Sala {
     @PrePersist
     @PreUpdate
     private void normalize() {
-        if (ocupacion == null) ocupacion = 0;
-        if (ocupacion < 0) ocupacion = 0;
-        if (ocupacion > 2) ocupacion = 2;
+        if (ocupacion == null)
+            ocupacion = 0;
+        if (ocupacion < 0)
+            ocupacion = 0;
+        if (ocupacion > 2)
+            ocupacion = 2;
+        if (espectadores == null)
+            espectadores = 0;
+        if (espectadores < 0)
+            espectadores = 0;
     }
 
     public Sala(Long id) {
