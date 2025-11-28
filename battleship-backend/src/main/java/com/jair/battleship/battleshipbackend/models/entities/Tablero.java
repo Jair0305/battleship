@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,10 +22,20 @@ public class Tablero {
     private Long id;
 
 
-    @OneToOne
+    @JsonIgnore
+    @ManyToOne
     @JoinColumn(name = "jugador_id")
     private Jugador jugador;
 
+    @ManyToOne
+    @JoinColumn(name = "partida_id")
+    private Partida partida;
+
+    // Posiciones donde hay barcos colocados
     @ElementCollection
-    private Map<String, Boolean> posiciones = new HashMap<>();
+    private Map<String, Boolean> posicionesBarcos = new HashMap<>();
+
+    // Posiciones que ya fueron atacadas en esta partida
+    @ElementCollection
+    private Map<String, Boolean> posicionesAtacadas = new HashMap<>();
 }

@@ -27,4 +27,17 @@ public class JuegoController {
     public boolean realizarDisparo(@PathVariable Long jugadorId, @RequestParam String posicion) {
         return juegoService.realizarDisparo(jugadorId, posicion);
     }
+
+    // Nuevo: marcar listo para iniciar preparación (ambos jugadores deben
+    // presionar)
+    @PostMapping("/ready/{jugadorId}")
+    public Map<String, Object> marcarListo(@PathVariable Long jugadorId) {
+        return juegoService.marcarListo(jugadorId);
+    }
+
+    // Nuevo: consultar estado actual de una sala
+    @GetMapping("/estado/{salaId}")
+    public Map<String, Object> obtenerEstado(@PathVariable Long salaId) {
+        return juegoService.obtenerEstadoSala(salaId);
+    }
 }

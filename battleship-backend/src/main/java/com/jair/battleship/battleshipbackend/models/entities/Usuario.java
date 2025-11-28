@@ -7,27 +7,25 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.Instant;
 
 @Entity
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Jugador {
+public class Usuario {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String nombre;
-    private int puntuacion;
+
+    @Column(nullable = false, unique = true, length = 64)
+    private String username;
 
     @JsonIgnore
-    @ManyToOne
-    @JoinColumn(name = "sala_id")
-    private Sala sala;
+    @Column(nullable = false)
+    private String passwordHash;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "jugador", cascade = CascadeType.ALL)
-    private List<Tablero> tableros = new ArrayList<>();
+    private Instant createdAt = Instant.now();
 }

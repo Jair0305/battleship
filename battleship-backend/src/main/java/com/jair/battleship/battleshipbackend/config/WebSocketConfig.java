@@ -16,6 +16,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(org.springframework.web.socket.config.annotation.StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws").setAllowedOrigins("*").withSockJS();
+        // No se puede usar "*" con credenciales; usar patrones/orígenes explícitos.
+        registry.addEndpoint("/ws").setAllowedOriginPatterns(
+            "http://localhost:3002",
+            "http://localhost:3001",
+            "http://localhost:3000"
+        ).withSockJS();
     }
 }

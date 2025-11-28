@@ -19,14 +19,23 @@ public class SalaController {
         return salaService.obtenerSalasDisponibles();
     }
 
+    @GetMapping("/todas")
+    public List<Sala> obtenerTodas() {
+        return salaService.obtenerTodas();
+    }
+
     @PostMapping
     public Sala crearSala(@RequestParam String nombre) {
         return salaService.crearSala(nombre);
     }
 
     @PutMapping("/{id}/ocupar")
-    public void ocuparSala(@PathVariable Long id) {
-        salaService.ocuparSala(id);
+    public Sala ocuparSala(@PathVariable Long id) {
+        return salaService.ocuparSala(id);
+    }
+
+    @PutMapping("/{id}/liberar")
+    public Sala liberarSala(@PathVariable Long id) {
+        return salaService.liberarSala(id);
     }
 }
- 

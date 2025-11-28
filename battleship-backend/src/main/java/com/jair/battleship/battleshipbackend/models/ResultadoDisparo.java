@@ -13,6 +13,7 @@ public class ResultadoDisparo {
     private Long jugadorId;
     private String posicion;
     private boolean acierto;
+    private Long ts;
 
 }
 

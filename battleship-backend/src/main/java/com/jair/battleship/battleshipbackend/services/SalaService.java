@@ -10,7 +10,12 @@ public interface SalaService {
 
     List<Sala> obtenerSalasDisponibles();
 
+    // Nuevo: listar todas
+    List<Sala> obtenerTodas();
+
     Sala crearSala(String nombre);
 
-    void ocuparSala(Long id);
+    Sala ocuparSala(Long id);
+
+    Sala liberarSala(Long id);
 }
