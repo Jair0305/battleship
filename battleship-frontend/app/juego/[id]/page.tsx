@@ -104,6 +104,17 @@ export default function TableroPage() {
 
     const [jugadoresMap, setJugadoresMap] = useState<Record<number, string>>({});
     const [tablerosPublicos, setTablerosPublicos] = useState<Record<number, Record<string, boolean>>>({});
+    const [scoreDetails, setScoreDetails] = useState<any>(null);
+
+    useEffect(() => {
+        if (estadoPartida === 'FINALIZADA' && partidaId && jugadorId) {
+            axios.get(`${API_BASE}/api/ranking/partida/${partidaId}/jugador/${jugadorId}`)
+                .then(res => setScoreDetails(res.data))
+                .catch(err => console.error("Error fetching score:", err));
+        } else {
+            setScoreDetails(null);
+        }
+    }, [estadoPartida, partidaId, jugadorId]);
 
     const [chatMsg, setChatMsg] = useState('');
     const [chatHistory, setChatHistory] = useState<{ sender: string, content: string, receivedAt: number }[]>([]);
@@ -442,11 +453,30 @@ export default function TableroPage() {
                 });
                 // NEW: Subscribe to generic events (rematch, game start, seat changes)
                 client.subscribe(`/topic/sala/${params.id}/evento`, () => {
-                    refreshEstado().catch(() => { });
-                    // Also refresh room info to see seat changes
+                    // Update room state (seats)
                     axios.get<Sala[]>(`${API_BASE}/api/sala/todas`).then(({ data }) => {
                         const encontrada = data.find(s => String(s.id) === String(params.id));
                         if (encontrada) setSala(encontrada);
+                    }).catch(() => { });
+
+                    // Update game state (started, readyCount) and refresh turn
+                    axios.get(`${API_BASE}/api/juego/estado/${params.id}`).then(({ data }) => {
+                        setReadyCount(data.readyCount || 0);
+                        setStarted(Boolean(data.started));
+                        setDeadline(data.deadline ?? null);
+
+                        if (data.started) {
+                            // If started, ensure we have the game ID and refresh
+                            axios.get(`${API_BASE}/api/partidas/sala/${params.id}/activa`).then(({ data: activeData }) => {
+                                const pid = (activeData && (activeData.id ?? activeData.partidaId)) || null;
+                                if (pid) {
+                                    setPartidaId(pid);
+                                    refreshEstado(pid).catch(() => { });
+                                }
+                            }).catch(() => { });
+                        } else {
+                            refreshEstado().catch(() => { });
+                        }
                     }).catch(() => { });
                 });
             },
@@ -1099,6 +1129,37 @@ export default function TableroPage() {
                             <div className="text-slate-400">
                                 {ganadorId === jugadorId ? 'Has dominado los mares.' : 'Mejor suerte la próxima vez.'}
                             </div>
+
+                            {scoreDetails && (
+                                <div className="bg-slate-800/50 rounded-lg p-4 text-sm space-y-2 text-left">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">Puntos Base</span>
+                                        <span className="font-bold text-white">{scoreDetails.puntosBase}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">Precisión</span>
+                                        <span className="font-bold text-blue-400">+{scoreDetails.puntosPrecision}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">Barcos Hundidos</span>
+                                        <span className="font-bold text-red-400">+{scoreDetails.puntosBarcos}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">Supervivencia</span>
+                                        <span className="font-bold text-green-400">+{scoreDetails.puntosSupervivencia}</span>
+                                    </div>
+                                    {scoreDetails.puntosRacha > 0 && (
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">Racha de Victorias</span>
+                                            <span className="font-bold text-yellow-400">+{scoreDetails.puntosRacha}</span>
+                                        </div>
+                                    )}
+                                    <div className="border-t border-slate-700 pt-2 mt-2 flex justify-between text-lg">
+                                        <span className="font-bold text-slate-200">Total PR</span>
+                                        <span className="font-bold text-white">{scoreDetails.total}</span>
+                                    </div>
+                                </div>
+                            )}
                             {rematchSec !== null && (
                                 <div className="text-2xl font-bold text-yellow-400 animate-pulse">
                                     Revancha expira en: {rematchSec}s

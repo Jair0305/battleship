@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @Transactional
@@ -36,12 +38,27 @@ public class PartidaServiceImpl implements PartidaService {
     @Autowired
     private EspectadorRepository espectadorRepository;
     @Autowired
+    private com.jair.battleship.battleshipbackend.services.RankingService rankingService;
+
+    @Autowired
     private com.jair.battleship.battleshipbackend.services.SalaService salaService;
 
     private void broadcastEvento(Long salaId) {
-        try {
-            messagingTemplate.convertAndSend("/topic/sala/" + salaId + "/evento", "UPDATE");
-        } catch (Exception ignored) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        messagingTemplate.convertAndSend("/topic/sala/" + salaId + "/evento", "UPDATE");
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        } else {
+            try {
+                messagingTemplate.convertAndSend("/topic/sala/" + salaId + "/evento", "UPDATE");
+            } catch (Exception ignored) {
+            }
         }
     }
 
@@ -173,6 +190,9 @@ public class PartidaServiceImpl implements PartidaService {
             sumarPuntos(atacantePar.getJugador().getId(), 50);
             actualizarStatsVictoria(atacantePar.getJugador().getId(), defensorPar.getJugador().getId());
 
+            // Calculate and save ranking points
+            rankingService.procesarPartida(partida);
+
             broadcastEvento(partida.getSala().getId());
             return true;
         } else {
@@ -214,6 +234,11 @@ public class PartidaServiceImpl implements PartidaService {
             participacionRepository.save(df);
             revertirStatsVictoria(d.getAtacante().getId(), d.getDefensor().getId());
             restarPuntos(d.getAtacante().getId(), 50);
+            // Revert ranking points? Complex. For now, we assume undo is only possible if
+            // game not ended or we handle it later.
+            // If game WAS ended and we undo, we should probably delete the Puntuacion
+            // record.
+            // TODO: Handle ranking reversion.
         }
 
         partida.setTurnoActualJugadorId(d.getAtacante().getId());
@@ -454,8 +479,22 @@ public class PartidaServiceImpl implements PartidaService {
         partida.setSala(sala);
         partida.setEstado(EstadoPartida.EN_CURSO);
         partida.setInicio(Instant.now());
-        partida.setTurnoActualJugadorId(host.getId());
+        // Randomize starting player
+        boolean startHost = Math.random() < 0.5;
+        partida.setTurnoActualJugadorId(startHost ? host.getId() : challenger.getId());
         partida = partidaRepository.save(partida);
+
+        // Associate draft boards with the new game
+        Tablero t1 = tableroRepository.findByJugadorIdAndPartidaIsNull(host.getId()).orElse(null);
+        if (t1 != null) {
+            t1.setPartida(partida);
+            tableroRepository.save(t1);
+        }
+        Tablero t2 = tableroRepository.findByJugadorIdAndPartidaIsNull(challenger.getId()).orElse(null);
+        if (t2 != null) {
+            t2.setPartida(partida);
+            tableroRepository.save(t2);
+        }
 
         Participacion p1 = new Participacion();
         p1.setPartida(partida);
