@@ -47,13 +47,33 @@ public class JuegoServiceImpl implements JuegoService {
         Jugador jugador = new Jugador();
         jugador.setNombre(nombreJugador);
         Sala sala = salaRepository.findById(salaId).orElseThrow();
+
+        // Assign seat
+        if (sala.getJugador1() == null) {
+            sala.setJugador1(jugador);
+        } else if (sala.getJugador2() == null) {
+            sala.setJugador2(jugador);
+        } else {
+            throw new IllegalStateException("La sala está llena");
+        }
+
+        sala.setOcupacion((sala.getJugador1() != null ? 1 : 0) + (sala.getJugador2() != null ? 1 : 0));
+        sala.setDisponible(sala.getOcupacion() < 2);
+        sala = salaRepository.save(sala);
+
         jugador.setSala(sala);
         Tablero tablero = new Tablero();
         tablero.setJugador(jugador);
-        // Antes: jugador.setTablero(tablero);
-        // Ahora: Jugador mantiene una lista de tableros
         jugador.getTableros().add(tablero);
-        return jugadorRepository.save(jugador);
+        Jugador saved = jugadorRepository.save(jugador);
+
+        // Broadcast update
+        try {
+            messagingTemplate.convertAndSend("/topic/salas", salaRepository.findAll());
+        } catch (Exception ignored) {
+        }
+
+        return saved;
     }
 
     public void inicializarTablero(Long jugadorId, Map<String, Boolean> posiciones) {

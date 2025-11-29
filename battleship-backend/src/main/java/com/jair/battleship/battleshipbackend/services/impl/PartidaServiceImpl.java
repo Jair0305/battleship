@@ -154,7 +154,7 @@ public class PartidaServiceImpl implements PartidaService {
         if (tableroDefensor.getPosicionesBarcos() == null || tableroDefensor.getPosicionesBarcos().isEmpty()) {
             throw new IllegalStateException("El oponente aún no ha colocado sus barcos");
         }
-        if (Boolean.TRUE.equals(atacadas.get(posicion))) {
+        if (atacadas.containsKey(posicion)) {
             throw new IllegalStateException("Esa posición ya fue atacada");
         }
         boolean acierto = Boolean.TRUE.equals(tableroDefensor.getPosicionesBarcos().get(posicion));
@@ -196,8 +196,15 @@ public class PartidaServiceImpl implements PartidaService {
             broadcastEvento(partida.getSala().getId());
             return true;
         } else {
-            partida.setTurnoActualJugadorId(defensorPar.getJugador().getId());
-            partidaRepository.save(partida);
+            // Only switch turn if it was a MISS
+            if (!acierto) {
+                partida.setTurnoActualJugadorId(defensorPar.getJugador().getId());
+                partidaRepository.save(partida);
+            } else {
+                // If hit, keep turn (do not change turnoActualJugadorId)
+                // Broadcast event to notify hit and that turn stays
+                partidaRepository.save(partida); // Save just in case
+            }
         }
         return acierto;
     }

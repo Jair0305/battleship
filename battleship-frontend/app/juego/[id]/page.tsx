@@ -105,6 +105,7 @@ export default function TableroPage() {
     const [jugadoresMap, setJugadoresMap] = useState<Record<number, string>>({});
     const [tablerosPublicos, setTablerosPublicos] = useState<Record<number, Record<string, boolean>>>({});
     const [scoreDetails, setScoreDetails] = useState<any>(null);
+    const [hoveredCell, setHoveredCell] = useState<string | null>(null);
 
     useEffect(() => {
         if (estadoPartida === 'FINALIZADA' && partidaId && jugadorId) {
@@ -984,7 +985,6 @@ export default function TableroPage() {
                                         </button>
                                     </div>
                                 )}
-
                                 <div className="overflow-auto flex justify-center">
                                     <div className="inline-grid gap-[1px] bg-slate-700/50 p-1 rounded border border-slate-700" style={{ gridTemplateColumns: `repeat(${colLabels.length + 1}, minmax(32px, 1fr))` }}>
                                         <div />
@@ -1011,18 +1011,24 @@ export default function TableroPage() {
                                                         isSelected = posicionDisparo === key;
                                                     }
 
+                                                    const isHoveredRow = hoveredCell && hoveredCell.startsWith(f);
+                                                    const isHoveredCol = hoveredCell && hoveredCell.endsWith(String(c));
+                                                    const isCrosshair = isHoveredRow || isHoveredCol;
+
                                                     return (
                                                         <button
                                                             key={`e-${key}`}
                                                             type="button"
                                                             onClick={() => !isSpectator && shootAt(key)}
-                                                            disabled={isSpectator || !esMiTurno || !oponenteListo}
+                                                            onMouseEnter={() => setHoveredCell(key)}
+                                                            onMouseLeave={() => setHoveredCell(null)}
+                                                            disabled={isSpectator || !esMiTurno || !oponenteListo || shot !== undefined}
                                                             className={`w-8 h-8 flex items-center justify-center text-sm transition-all duration-200 relative
                                                                 ${isSelected ? 'ring-2 ring-red-500 z-10' : ''}
-                                                                ${shot === undefined ? 'bg-slate-800/50 hover:bg-slate-700' : ''}
+                                                                ${shot === undefined ? (isCrosshair ? 'bg-slate-700' : 'bg-slate-800/50 hover:bg-slate-700') : ''}
                                                                 ${shot === true ? 'bg-red-500/20' : ''}
                                                                 ${shot === false ? 'bg-slate-800/80' : ''}
-                                                                ${!isSpectator && esMiTurno && oponenteListo ? 'cursor-crosshair' : 'cursor-default'}
+                                                                ${!isSpectator && esMiTurno && oponenteListo && shot === undefined ? 'cursor-crosshair' : 'cursor-default'}
                                                             `}
                                                             title={key}
                                                         >
@@ -1198,6 +1204,6 @@ export default function TableroPage() {
                 )}
 
             </div>
-        </div>
+        </div >
     );
 }

@@ -180,7 +180,10 @@ const Salas = () => {
         if (!user) { alert('Inicia sesión para liberar una sala'); return; }
         try {
             setLoading(true);
-            await axios.put(`${API_BASE}/api/sala/${id}/liberar`);
+            const storedJugadorId = localStorage.getItem(`bship:jugadorId:${id}`);
+            await axios.put(`${API_BASE}/api/sala/${id}/liberar`, null, {
+                params: { jugadorId: storedJugadorId || (user ? user.id : null) }
+            });
             if (currentRoomId === id) {
                 localStorage.removeItem('bship:currentRoomId');
                 // limpiar jugadorId asociado a esa sala

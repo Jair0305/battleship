@@ -52,9 +52,19 @@ public class SalaServiceImpl implements SalaService {
     }
 
     @Override
-    public Sala liberarSala(Long id) {
-        // Deprecated
-        return salaRepository.findById(id).orElseThrow();
+    public Sala liberarSala(Long id, Long jugadorId) {
+        Sala sala = salaRepository.findById(id).orElseThrow();
+        if (jugadorId != null) {
+            if (sala.getJugador1() != null && sala.getJugador1().getId().equals(jugadorId)) {
+                sala.setJugador1(null);
+            } else if (sala.getJugador2() != null && sala.getJugador2().getId().equals(jugadorId)) {
+                sala.setJugador2(null);
+            }
+            updateOcupacion(sala);
+            sala = salaRepository.save(sala);
+            broadcastUpdate();
+        }
+        return sala;
     }
 
     @Override

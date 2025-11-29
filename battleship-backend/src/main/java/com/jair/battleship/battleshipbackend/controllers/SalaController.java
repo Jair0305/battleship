@@ -35,8 +35,8 @@ public class SalaController {
     }
 
     @PutMapping("/{id}/liberar")
-    public Sala liberarSala(@PathVariable Long id) {
-        return salaService.liberarSala(id);
+    public Sala liberarSala(@PathVariable Long id, @RequestParam(required = false) Long jugadorId) {
+        return salaService.liberarSala(id, jugadorId);
     }
 
     @PutMapping("/{id}/entrarEspectador")

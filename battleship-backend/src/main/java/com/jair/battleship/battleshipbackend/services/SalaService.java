@@ -13,7 +13,7 @@ public interface SalaService {
 
     Sala ocuparSala(Long id);
 
-    Sala liberarSala(Long id);
+    Sala liberarSala(Long id, Long jugadorId);
 
     Sala entrarEspectador(Long salaId);
 
