@@ -35,5 +35,9 @@ public class Disparo {
 
     private boolean acierto;
 
+    public boolean isAcierto() {
+        return this.acierto;
+    }
+
     private Instant timestamp = Instant.now();
 }

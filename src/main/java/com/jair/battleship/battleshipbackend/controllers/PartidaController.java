@@ -61,13 +61,11 @@ public class PartidaController {
         partidaService.agregarEspectador(partidaId, jugadorId);
     }
 
-    // Nuevo: obtener la partida activa por sala
     @GetMapping("/sala/{salaId}/activa")
     public Partida obtenerActivaPorSala(@PathVariable Long salaId) {
         return partidaService.obtenerActivaPorSala(salaId);
     }
 
-    // Nuevo: obtener estado resumido de la partida, personalizado por jugador
     @GetMapping("/{partidaId}/estado")
     public Map<String, Object> obtenerEstadoPartida(@PathVariable Long partidaId,
             @RequestParam(required = false) Long jugadorId) {
@@ -77,5 +75,10 @@ public class PartidaController {
     @PostMapping("/{partidaId}/revancha")
     public void revancha(@PathVariable Long partidaId, @RequestParam Long jugadorId) {
         partidaService.solicitarRevancha(partidaId, jugadorId);
+    }
+
+    @PostMapping("/{partidaId}/revancha/rechazar")
+    public void rechazarRevancha(@PathVariable Long partidaId, @RequestParam Long jugadorId) {
+        partidaService.rechazarRevancha(partidaId, jugadorId);
     }
 }

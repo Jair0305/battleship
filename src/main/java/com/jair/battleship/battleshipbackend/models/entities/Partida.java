@@ -52,4 +52,16 @@ public class Partida {
     @OneToMany(mappedBy = "partida", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<Disparo> disparos = new ArrayList<>();
+
+    public List<Disparo> getDisparos() {
+        return this.disparos;
+    }
+
+    public boolean isRematchRequestJ1() {
+        return this.rematchRequestJ1;
+    }
+
+    public boolean isRematchRequestJ2() {
+        return this.rematchRequestJ2;
+    }
 }

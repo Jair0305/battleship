@@ -11,4 +11,16 @@ public class ChatMessage {
     private String sender;
     private String content;
     private String type; // "CHAT", "JOIN", "LEAVE"
+
+    public String getSender() {
+        return this.sender;
+    }
+
+    public String getContent() {
+        return this.content;
+    }
+
+    public String getType() {
+        return this.type;
+    }
 }

@@ -7,7 +7,7 @@ import com.jair.battleship.battleshipbackend.repositories.JugadorRepository;
 import com.jair.battleship.battleshipbackend.repositories.TableroRepository;
 import com.jair.battleship.battleshipbackend.repositories.SalaRepository;
 import com.jair.battleship.battleshipbackend.services.JuegoService;
-import com.jair.battleship.battleshipbackend.services   .PartidaService;
+import com.jair.battleship.battleshipbackend.services.PartidaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -34,67 +34,56 @@ public class JuegoServiceImpl implements JuegoService {
     @Autowired
     private PartidaService partidaService;
 
-    // Estado de preparación por sala en memoria (no persistente)
+    // Estado de preparación por sala (en memoria)
     private static class PrepState {
         Set<Long> readyPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
         boolean started = false;
-        Long deadline = null; // epoch millis
+        Long deadline = null;
     }
 
-    private final Map<Long, PrepState> prepStates = new ConcurrentHashMap<>();
+    private static final Map<Long, PrepState> prepStates = new ConcurrentHashMap<>();
+
+    /**
+     * Reset prep state for a sala (called when starting a rematch)
+     */
+    public static void resetPrepState(Long salaId) {
+        prepStates.remove(salaId);
+    }
 
     public Jugador registrarJugadorEnSala(String nombreJugador, Long salaId) {
-        Jugador jugador = new Jugador();
-        jugador.setNombre(nombreJugador);
         Sala sala = salaRepository.findById(salaId).orElseThrow();
 
-        // Assign seat
-        if (sala.getJugador1() == null) {
-            sala.setJugador1(jugador);
-        } else if (sala.getJugador2() == null) {
-            sala.setJugador2(jugador);
-        } else {
-            throw new IllegalStateException("La sala está llena");
-        }
-
-        sala.setOcupacion((sala.getJugador1() != null ? 1 : 0) + (sala.getJugador2() != null ? 1 : 0));
-        sala.setDisponible(sala.getOcupacion() < 2);
-        sala = salaRepository.save(sala);
-
+        Jugador jugador = new Jugador();
+        jugador.setNombre(nombreJugador);
+        jugador.setUsername(nombreJugador); // Link to user identity for ranking
         jugador.setSala(sala);
+
         Tablero tablero = new Tablero();
         tablero.setJugador(jugador);
         jugador.getTableros().add(tablero);
+
         Jugador saved = jugadorRepository.save(jugador);
 
-        // Broadcast update
-        try {
-            messagingTemplate.convertAndSend("/topic/salas", salaRepository.findAll());
-        } catch (Exception ignored) {
-        }
+        broadcastSalas();
+        broadcastEvento(salaId);
 
         return saved;
     }
 
     public void inicializarTablero(Long jugadorId, Map<String, Boolean> posiciones) {
-        // Buscar el tablero actual del jugador sin partida asociada
         Tablero tablero = tableroRepository.findByJugadorIdAndPartidaIsNull(jugadorId).orElseThrow();
-        // Establecer las posiciones donde hay barcos
         tablero.setPosicionesBarcos(posiciones);
         tableroRepository.save(tablero);
     }
 
     @Transactional
     public boolean realizarDisparo(Long jugadorId, String posicion) {
-        // Obtener atacante y su sala
         Jugador atacante = jugadorRepository.findById(jugadorId).orElseThrow();
         Sala sala = atacante.getSala();
         if (sala == null || sala.getId() == null) {
             throw new IllegalStateException("El jugador no está en una sala válida");
         }
 
-        // Si existe una partida activa para la sala, delegar en PartidaService
-        // (persistente y con turnos)
         try {
             var activa = partidaService.obtenerActivaPorSala(sala.getId());
             if (activa != null) {
@@ -103,7 +92,7 @@ public class JuegoServiceImpl implements JuegoService {
         } catch (Exception ignored) {
         }
 
-        // Legacy: disparo contra tablero actual sin partida asociada
+        // Legacy fallback
         Sala salaFull = salaRepository.findById(sala.getId()).orElseThrow();
         Jugador oponente = salaFull.getJugadores().stream()
                 .filter(j -> !j.getId().equals(jugadorId))
@@ -128,18 +117,15 @@ public class JuegoServiceImpl implements JuegoService {
         PrepState state = prepStates.computeIfAbsent(salaId, id -> new PrepState());
         state.readyPlayers.add(jugadorId);
 
-        // Contar jugadores en la sala (hasta 2)
         int readyCount = state.readyPlayers.size();
 
         if (!state.started && readyCount >= 2) {
             state.started = true;
-            state.deadline = System.currentTimeMillis() + 60_000L; // 60s
+            state.deadline = System.currentTimeMillis() + 60_000L;
 
-            // Crear la partida oficialmente en el backend
             try {
                 partidaService.iniciarPartidaDesdeSala(salaId);
             } catch (Exception e) {
-                // Log error or handle
                 System.err.println("Error al iniciar partida: " + e.getMessage());
             }
         }
@@ -170,5 +156,19 @@ public class JuegoServiceImpl implements JuegoService {
         payload.put("started", started);
         payload.put("deadline", deadline);
         return payload;
+    }
+
+    private void broadcastSalas() {
+        try {
+            messagingTemplate.convertAndSend("/topic/salas", salaRepository.findAll());
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void broadcastEvento(Long salaId) {
+        try {
+            messagingTemplate.convertAndSend("/topic/sala/" + salaId + "/evento", "UPDATE");
+        } catch (Exception ignored) {
+        }
     }
 }

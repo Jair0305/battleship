@@ -22,6 +22,10 @@ public class Jugador {
     private String nombre;
     private int puntuacion;
 
+    // Link to the authenticated user (so the same person reuses their stats)
+    @Column(name = "username")
+    private String username;
+
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "sala_id")

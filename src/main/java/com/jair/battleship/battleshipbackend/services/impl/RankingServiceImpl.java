@@ -107,7 +107,7 @@ public class RankingServiceImpl implements RankingService {
 
         // No negativos
         Integer puntajeActual = puntuacionRepository.findGlobalLeaderboard(PageRequest.of(0, 1000)).stream()
-                .filter(obj -> ((Long) obj[0]).equals(jugador.getId()))
+                .filter(obj -> jugador.getNombre().equals(obj[0]))
                 .map(obj -> ((Number) obj[2]).intValue())
                 .findFirst()
                 .orElse(0);

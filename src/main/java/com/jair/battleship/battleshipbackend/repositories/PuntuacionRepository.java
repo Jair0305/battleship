@@ -14,16 +14,18 @@ import java.util.Optional;
 @Repository
 public interface PuntuacionRepository extends JpaRepository<Puntuacion, Long> {
 
-        @Query("SELECT p.jugador.id, p.jugador.nombre, SUM(p.total) as totalPuntos " +
+        // Group by nombre (username) to aggregate scores across different Jugador
+        // entities for the same person
+        @Query("SELECT p.jugador.nombre, p.jugador.nombre, SUM(p.total) as totalPuntos " +
                         "FROM Puntuacion p " +
                         "WHERE p.fecha >= :startDate " +
-                        "GROUP BY p.jugador.id, p.jugador.nombre " +
+                        "GROUP BY p.jugador.nombre " +
                         "ORDER BY totalPuntos DESC")
         List<Object[]> findLeaderboardSince(@Param("startDate") Instant startDate, Pageable pageable);
 
-        @Query("SELECT p.jugador.id, p.jugador.nombre, SUM(p.total) as totalPuntos " +
+        @Query("SELECT p.jugador.nombre, p.jugador.nombre, SUM(p.total) as totalPuntos " +
                         "FROM Puntuacion p " +
-                        "GROUP BY p.jugador.id, p.jugador.nombre " +
+                        "GROUP BY p.jugador.nombre " +
                         "ORDER BY totalPuntos DESC")
         List<Object[]> findGlobalLeaderboard(Pageable pageable);
 

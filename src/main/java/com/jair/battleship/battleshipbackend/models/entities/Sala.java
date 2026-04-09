@@ -32,12 +32,14 @@ public class Sala {
     private Integer espectadores = 0;
 
     @OneToOne
+    @JoinColumn(name = "jugador1_id")
     private Jugador jugador1;
 
     @OneToOne
+    @JoinColumn(name = "jugador2_id")
     private Jugador jugador2;
 
-    // @JsonIgnore - Removed to show players in lobby
+    @JsonIgnore
     @OneToMany(mappedBy = "sala")
     private List<Jugador> jugadores = new ArrayList<>();
 

@@ -134,6 +134,11 @@ public class PartidaServiceImpl implements PartidaService {
         if (t.getPosicionesAtacadas() == null)
             t.setPosicionesAtacadas(new HashMap<>());
         tableroRepository.save(t);
+
+        // Broadcast event so the opponent knows ships were placed
+        if (partida.getSala() != null) {
+            broadcastEvento(partida.getSala().getId());
+        }
     }
 
     @Override
@@ -179,7 +184,7 @@ public class PartidaServiceImpl implements PartidaService {
             partida.setEstado(EstadoPartida.FINALIZADA);
             partida.setFin(Instant.now());
             partida.setGanador(atacantePar.getJugador());
-            partida.setRematchDeadline(Instant.now().plusSeconds(30)); // 30 seconds for rematch
+            partida.setRematchDeadline(Instant.now().plusSeconds(30));
             partidaRepository.save(partida);
 
             atacantePar.setResultado(ResultadoParticipacion.GANO);
@@ -190,20 +195,19 @@ public class PartidaServiceImpl implements PartidaService {
             sumarPuntos(atacantePar.getJugador().getId(), 50);
             actualizarStatsVictoria(atacantePar.getJugador().getId(), defensorPar.getJugador().getId());
 
-            // Calculate and save ranking points
             rankingService.procesarPartida(partida);
 
             broadcastEvento(partida.getSala().getId());
             return true;
         } else {
-            // Only switch turn if it was a MISS
             if (!acierto) {
                 partida.setTurnoActualJugadorId(defensorPar.getJugador().getId());
                 partidaRepository.save(partida);
             } else {
-                // If hit, keep turn (do not change turnoActualJugadorId)
-                // Broadcast event to notify hit and that turn stays
-                partidaRepository.save(partida); // Save just in case
+                partidaRepository.save(partida);
+            }
+            if (partida.getSala() != null) {
+                broadcastEvento(partida.getSala().getId());
             }
         }
         return acierto;
@@ -241,11 +245,6 @@ public class PartidaServiceImpl implements PartidaService {
             participacionRepository.save(df);
             revertirStatsVictoria(d.getAtacante().getId(), d.getDefensor().getId());
             restarPuntos(d.getAtacante().getId(), 50);
-            // Revert ranking points? Complex. For now, we assume undo is only possible if
-            // game not ended or we handle it later.
-            // If game WAS ended and we undo, we should probably delete the Puntuacion
-            // record.
-            // TODO: Handle ranking reversion.
         }
 
         partida.setTurnoActualJugadorId(d.getAtacante().getId());
@@ -303,6 +302,19 @@ public class PartidaServiceImpl implements PartidaService {
         List<Partida> creadas = partidaRepository.findBySalaIdAndEstado(salaId, EstadoPartida.CREADA);
         if (!creadas.isEmpty())
             return creadas.get(0);
+        // Also return recently finalized games (for rematch flow)
+        List<Partida> finalizadas = partidaRepository.findBySalaIdAndEstado(salaId, EstadoPartida.FINALIZADA);
+        if (!finalizadas.isEmpty()) {
+            // Return the most recent one
+            finalizadas.sort((a, b) -> {
+                if (a.getFin() == null)
+                    return 1;
+                if (b.getFin() == null)
+                    return -1;
+                return b.getFin().compareTo(a.getFin());
+            });
+            return finalizadas.get(0);
+        }
         throw new NoSuchElementException("No hay partida activa en la sala");
     }
 
@@ -331,6 +343,11 @@ public class PartidaServiceImpl implements PartidaService {
                 tabOp.ifPresent(t -> {
                     dto.put("oponenteImpactos", new HashMap<>(t.getPosicionesAtacadas()));
                     dto.put("oponenteListo", t.getPosicionesBarcos() != null && !t.getPosicionesBarcos().isEmpty());
+                    // Include opponent ship positions ONLY if the game is finished (for sunk ship
+                    // visualization)
+                    if (partida.getEstado() == EstadoPartida.FINALIZADA) {
+                        dto.put("oponenteBarcos", new HashMap<>(t.getPosicionesBarcos()));
+                    }
                 });
             }
         } else {
@@ -486,22 +503,24 @@ public class PartidaServiceImpl implements PartidaService {
         partida.setSala(sala);
         partida.setEstado(EstadoPartida.EN_CURSO);
         partida.setInicio(Instant.now());
-        // Randomize starting player
         boolean startHost = Math.random() < 0.5;
         partida.setTurnoActualJugadorId(startHost ? host.getId() : challenger.getId());
         partida = partidaRepository.save(partida);
 
-        // Associate draft boards with the new game
-        Tablero t1 = tableroRepository.findByJugadorIdAndPartidaIsNull(host.getId()).orElse(null);
-        if (t1 != null) {
-            t1.setPartida(partida);
-            tableroRepository.save(t1);
-        }
-        Tablero t2 = tableroRepository.findByJugadorIdAndPartidaIsNull(challenger.getId()).orElse(null);
-        if (t2 != null) {
-            t2.setPartida(partida);
-            tableroRepository.save(t2);
-        }
+        // Create new blank boards for this game (don't reuse old ones)
+        Tablero t1 = new Tablero();
+        t1.setJugador(host);
+        t1.setPartida(partida);
+        t1.setPosicionesBarcos(new HashMap<>());
+        t1.setPosicionesAtacadas(new HashMap<>());
+        tableroRepository.save(t1);
+
+        Tablero t2 = new Tablero();
+        t2.setJugador(challenger);
+        t2.setPartida(partida);
+        t2.setPosicionesBarcos(new HashMap<>());
+        t2.setPosicionesAtacadas(new HashMap<>());
+        tableroRepository.save(t2);
 
         Participacion p1 = new Participacion();
         p1.setPartida(partida);
@@ -532,17 +551,35 @@ public class PartidaServiceImpl implements PartidaService {
             return; // Timeout
         }
 
-        Participacion p = participacionRepository.findByPartidaIdAndJugadorId(partidaId, jugadorId).orElseThrow();
-        if (p.getOrden() == 1) {
+        // Determine which player slot this is (by checking sala seats, not
+        // participation order)
+        Sala sala = partida.getSala();
+        if (sala == null)
+            return;
+
+        boolean isJ1 = sala.getJugador1() != null && sala.getJugador1().getId().equals(jugadorId);
+        boolean isJ2 = sala.getJugador2() != null && sala.getJugador2().getId().equals(jugadorId);
+
+        if (isJ1) {
             partida.setRematchRequestJ1(true);
-        } else {
+        } else if (isJ2) {
             partida.setRematchRequestJ2(true);
+        } else {
+            return; // Not a seated player
         }
         partidaRepository.save(partida);
-        broadcastEvento(partida.getSala().getId());
+        broadcastEvento(sala.getId());
 
         if (partida.isRematchRequestJ1() && partida.isRematchRequestJ2()) {
-            iniciarPartidaDesdeSala(partida.getSala().getId());
+            // Both want rematch — start a new game
+            // Clear the rematch deadline so the old game doesn't interfere
+            partida.setRematchDeadline(null);
+            partidaRepository.save(partida);
+
+            // Reset the JuegoServiceImpl PrepState for this sala
+            resetPrepState(sala.getId());
+
+            iniciarPartidaDesdeSala(sala.getId());
         }
     }
 
@@ -552,34 +589,53 @@ public class PartidaServiceImpl implements PartidaService {
         if (partida.getEstado() != EstadoPartida.FINALIZADA)
             return;
 
-        // Kick the player from seat
+        // Kick the player who declined from their seat
         Sala sala = partida.getSala();
         if (sala != null) {
-            Participacion p = participacionRepository.findByPartidaIdAndJugadorId(partidaId, jugadorId).orElse(null);
-            if (p != null) {
-                salaService.liberarPuesto(sala.getId(), p.getOrden());
+            if (sala.getJugador1() != null && sala.getJugador1().getId().equals(jugadorId)) {
+                salaService.liberarPuesto(sala.getId(), 1);
+            } else if (sala.getJugador2() != null && sala.getJugador2().getId().equals(jugadorId)) {
+                salaService.liberarPuesto(sala.getId(), 2);
             }
+            // Clear rematch deadline
+            partida.setRematchDeadline(null);
+            partidaRepository.save(partida);
+            broadcastEvento(sala.getId());
         }
-        broadcastEvento(partida.getSala().getId());
     }
 
     private void checkRematchTimeout(Partida partida) {
         if (partida.getEstado() == EstadoPartida.FINALIZADA && partida.getRematchDeadline() != null) {
             if (Instant.now().isAfter(partida.getRematchDeadline())) {
-                // Timeout reached. Kick anyone who hasn't accepted? Or just kick both to be
-                // safe/fair.
-                // Requirement: "Implement the logic for a player to be 'kicked from their seat'
-                // (become a spectator) if a rematch is declined or times out."
-                // Let's kick both to free the room for new players or re-selection.
                 Sala sala = partida.getSala();
                 if (sala != null) {
-                    salaService.liberarPuesto(sala.getId(), 1);
-                    salaService.liberarPuesto(sala.getId(), 2);
+                    // Only kick players who didn't accept rematch
+                    if (!partida.isRematchRequestJ1() && sala.getJugador1() != null) {
+                        salaService.liberarPuesto(sala.getId(), 1);
+                    }
+                    if (!partida.isRematchRequestJ2() && sala.getJugador2() != null) {
+                        salaService.liberarPuesto(sala.getId(), 2);
+                    }
                 }
-                partida.setRematchDeadline(null); // Clear deadline so we don't keep kicking
+                partida.setRematchDeadline(null);
                 partidaRepository.save(partida);
-                broadcastEvento(sala.getId());
+                if (sala != null) {
+                    broadcastEvento(sala.getId());
+                }
             }
+        }
+    }
+
+    /**
+     * Reset the in-memory PrepState for a sala (used when starting a rematch)
+     */
+    private void resetPrepState(Long salaId) {
+        try {
+            // Access the JuegoServiceImpl's prepStates map via reflection or a dedicated
+            // method
+            // For now, we'll use a static accessor
+            JuegoServiceImpl.resetPrepState(salaId);
+        } catch (Exception ignored) {
         }
     }
 }
