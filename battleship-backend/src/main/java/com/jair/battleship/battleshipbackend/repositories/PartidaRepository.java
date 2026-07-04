@@ -9,4 +9,5 @@ import java.util.List;
 public interface PartidaRepository extends JpaRepository<Partida, Long> {
     List<Partida> findByEstado(EstadoPartida estado);
     List<Partida> findBySalaIdAndEstado(Long salaId, EstadoPartida estado);
+    List<Partida> findByMesaIdOrderByIdDesc(Long mesaId);
 }

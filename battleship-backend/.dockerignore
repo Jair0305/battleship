@@ -1,0 +1,9 @@
+.agents
+.git
+.idea
+target
+data
+battleship-backend
+battleship-frontend
+*.db
+*.log

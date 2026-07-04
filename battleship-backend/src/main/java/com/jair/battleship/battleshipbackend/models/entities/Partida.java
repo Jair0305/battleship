@@ -42,8 +42,16 @@ public class Partida {
     private Sala sala;
 
     @ManyToOne
+    @JoinColumn(name = "mesa_id")
+    private Mesa mesa;
+
+    @ManyToOne
     @JoinColumn(name = "ganador_id")
     private Jugador ganador;
+
+    private boolean ratingProcessed = false;
+
+    private boolean abandono = false;
 
     @OneToMany(mappedBy = "partida", cascade = CascadeType.ALL)
     @JsonIgnore
@@ -52,4 +60,16 @@ public class Partida {
     @OneToMany(mappedBy = "partida", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<Disparo> disparos = new ArrayList<>();
+
+    public List<Disparo> getDisparos() {
+        return this.disparos;
+    }
+
+    public boolean isRematchRequestJ1() {
+        return this.rematchRequestJ1;
+    }
+
+    public boolean isRematchRequestJ2() {
+        return this.rematchRequestJ2;
+    }
 }

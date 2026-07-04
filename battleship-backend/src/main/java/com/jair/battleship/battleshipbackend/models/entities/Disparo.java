@@ -35,5 +35,13 @@ public class Disparo {
 
     private boolean acierto;
 
+    public boolean isAcierto() {
+        return this.acierto;
+    }
+
+    private String resultado;
+
+    private String barcoHundido;
+
     private Instant timestamp = Instant.now();
 }

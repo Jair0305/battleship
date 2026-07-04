@@ -11,6 +11,9 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import com.jair.battleship.battleshipbackend.services.PartidaService;
+import org.springframework.context.annotation.Lazy;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -26,6 +29,10 @@ public class SalaServiceImpl implements SalaService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @Autowired
+    @Lazy
+    private PartidaService partidaService;
+
     public List<Sala> obtenerSalasDisponibles() {
         return salaRepository.findByDisponible(true);
     }
@@ -40,14 +47,12 @@ public class SalaServiceImpl implements SalaService {
         sala.setDisponible(true);
         sala.setOcupacion(0);
         Sala saved = salaRepository.save(sala);
-        broadcastUpdate();
+        broadcastSalasList();
         return saved;
     }
 
     @Override
     public Sala ocuparSala(Long id) {
-        // Deprecated or mapped to seat logic if needed, but keeping for compatibility
-        // For now, just return the sala
         return salaRepository.findById(id).orElseThrow();
     }
 
@@ -62,7 +67,8 @@ public class SalaServiceImpl implements SalaService {
             }
             updateOcupacion(sala);
             sala = salaRepository.save(sala);
-            broadcastUpdate();
+            broadcastSalasList();
+            broadcastEvento(id);
         }
         return sala;
     }
@@ -74,7 +80,8 @@ public class SalaServiceImpl implements SalaService {
         int espectadores = (esp == null ? 0 : esp);
         sala.setEspectadores(espectadores + 1);
         Sala saved = salaRepository.save(sala);
-        broadcastUpdate();
+        broadcastSalasList();
+        broadcastEvento(id);
         return saved;
     }
 
@@ -86,7 +93,8 @@ public class SalaServiceImpl implements SalaService {
         if (espectadores > 0) {
             sala.setEspectadores(espectadores - 1);
             sala = salaRepository.save(sala);
-            broadcastUpdate();
+            broadcastSalasList();
+            broadcastEvento(id);
         }
         return sala;
     }
@@ -113,7 +121,8 @@ public class SalaServiceImpl implements SalaService {
 
         updateOcupacion(sala);
         Sala saved = salaRepository.save(sala);
-        broadcastUpdate();
+        broadcastSalasList();
+        broadcastEvento(salaId);
         return saved;
     }
 
@@ -127,7 +136,8 @@ public class SalaServiceImpl implements SalaService {
         }
         updateOcupacion(sala);
         Sala saved = salaRepository.save(sala);
-        broadcastUpdate();
+        broadcastSalasList();
+        broadcastEvento(salaId);
         return saved;
     }
 
@@ -139,11 +149,34 @@ public class SalaServiceImpl implements SalaService {
             count++;
         sala.setOcupacion(count);
         sala.setDisponible(count < 2);
+
+        if (count == 2) {
+            try {
+                partidaService.iniciarPartidaDesdeSala(sala.getId());
+            } catch (Exception ignored) {
+            }
+        }
     }
 
-    private void broadcastUpdate() {
+    /**
+     * Broadcast full room list to the lobby page (/topic/salas)
+     */
+    private void broadcastSalasList() {
         try {
             messagingTemplate.convertAndSend("/topic/salas", obtenerTodas());
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Broadcast an event to subscribers of a specific room
+     * (/topic/sala/{id}/evento)
+     * This notifies the game page of seat changes, so it can refresh the UI in
+     * real-time.
+     */
+    private void broadcastEvento(Long salaId) {
+        try {
+            messagingTemplate.convertAndSend("/topic/sala/" + salaId + "/evento", "UPDATE");
         } catch (Exception ignored) {
         }
     }
@@ -158,7 +191,7 @@ public class SalaServiceImpl implements SalaService {
             Sala sala3 = new Sala("Sala 3", true);
             sala3.setOcupacion(0);
             salaRepository.saveAll(Arrays.asList(sala1, sala2, sala3));
-            broadcastUpdate();
+            broadcastSalasList();
         }
     }
 }

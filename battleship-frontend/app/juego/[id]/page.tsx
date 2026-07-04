@@ -106,6 +106,161 @@ export default function TableroPage() {
     const [tablerosPublicos, setTablerosPublicos] = useState<Record<number, Record<string, boolean>>>({});
     const [scoreDetails, setScoreDetails] = useState<any>(null);
     const [hoveredCell, setHoveredCell] = useState<string | null>(null);
+    const [oponenteBarcos, setOponenteBarcos] = useState<Record<string, boolean>>({});
+
+    // Detect which hit cells belong to fully sunk ships
+    const sunkCells = useMemo(() => {
+        const sunk = new Set<string>();
+        const hitCells = Object.entries(myShots).filter(([, v]) => v).map(([k]) => k);
+        if (hitCells.length === 0) return sunk;
+
+        // If we have the opponent's ship map (game finished), compute exactly
+        if (Object.keys(oponenteBarcos).length > 0) {
+            // Group ship positions into ships by flood-fill adjacency
+            const shipCells = Object.entries(oponenteBarcos).filter(([, v]) => v).map(([k]) => k);
+            const visited = new Set<string>();
+            const groups: string[][] = [];
+
+            const getAdjacent = (key: string): string[] => {
+                const row = key.charCodeAt(0) - 'A'.charCodeAt(0);
+                const col = parseInt(key.slice(1), 10) - 1;
+                const adj: string[] = [];
+                if (row > 0) adj.push(`${String.fromCharCode('A'.charCodeAt(0) + row - 1)}${col + 1}`);
+                if (row < BOARD_SIZE - 1) adj.push(`${String.fromCharCode('A'.charCodeAt(0) + row + 1)}${col + 1}`);
+                if (col > 0) adj.push(`${String.fromCharCode('A'.charCodeAt(0) + row)}${col}`);
+                if (col < BOARD_SIZE - 1) adj.push(`${String.fromCharCode('A'.charCodeAt(0) + row)}${col + 2}`);
+                return adj;
+            };
+
+            for (const cell of shipCells) {
+                if (visited.has(cell)) continue;
+                const group: string[] = [];
+                const stack = [cell];
+                while (stack.length > 0) {
+                    const c = stack.pop()!;
+                    if (visited.has(c)) continue;
+                    if (!shipCells.includes(c)) continue;
+                    visited.add(c);
+                    group.push(c);
+                    for (const adj of getAdjacent(c)) {
+                        if (!visited.has(adj) && shipCells.includes(adj)) {
+                            stack.push(adj);
+                        }
+                    }
+                }
+                if (group.length > 0) groups.push(group);
+            }
+
+            // A ship group is sunk if ALL its cells have been hit
+            for (const group of groups) {
+                const allHit = group.every(c => myShots[c] === true);
+                if (allHit) {
+                    group.forEach(c => sunk.add(c));
+                }
+            }
+        } else {
+            // During play: use hit tracking to detect sunk ships
+            // We know standard ship sizes: [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
+            const hitSet = new Set(hitCells);
+            const visited = new Set<string>();
+
+            const getAdjacent = (key: string): string[] => {
+                const row = key.charCodeAt(0) - 'A'.charCodeAt(0);
+                const col = parseInt(key.slice(1), 10) - 1;
+                const adj: string[] = [];
+                if (row > 0) adj.push(`${String.fromCharCode('A'.charCodeAt(0) + row - 1)}${col + 1}`);
+                if (row < BOARD_SIZE - 1) adj.push(`${String.fromCharCode('A'.charCodeAt(0) + row + 1)}${col + 1}`);
+                if (col > 0) adj.push(`${String.fromCharCode('A'.charCodeAt(0) + row)}${col}`);
+                if (col < BOARD_SIZE - 1) adj.push(`${String.fromCharCode('A'.charCodeAt(0) + row)}${col + 2}`);
+                return adj;
+            };
+
+            // Group contiguous hit cells
+            const groups: string[][] = [];
+            for (const cell of hitCells) {
+                if (visited.has(cell)) continue;
+                const group: string[] = [];
+                const stack = [cell];
+                while (stack.length > 0) {
+                    const c = stack.pop()!;
+                    if (visited.has(c)) continue;
+                    if (!hitSet.has(c)) continue;
+                    visited.add(c);
+                    group.push(c);
+                    for (const adj of getAdjacent(c)) {
+                        if (!visited.has(adj) && hitSet.has(adj)) {
+                            stack.push(adj);
+                        }
+                    }
+                }
+                if (group.length > 0) groups.push(group);
+            }
+
+            // Check if the group is a valid ship (aligned in a line, matching a ship size)
+            const shipSizes = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1];
+            const usedSizes: number[] = [];
+
+            // Check each group is aligned (same row or same col) and matches a ship size
+            for (const group of groups) {
+                if (group.length === 0) continue;
+                // Check alignment
+                const rows = group.map(c => c.charCodeAt(0));
+                const cols = group.map(c => parseInt(c.slice(1), 10));
+                const sameRow = rows.every(r => r === rows[0]);
+                const sameCol = cols.every(c => c === cols[0]);
+                if (!sameRow && !sameCol) continue; // Not a valid ship shape
+
+                // Check if ALL surrounding cells (beyond the line) have been probed (miss or no ship)
+                // For size-1 ships, they're always "sunk" if hit
+                if (group.length === 1) {
+                    // Check if all 4 adjacent cells have been shot (miss) or are out of bounds
+                    const adj = getAdjacent(group[0]);
+                    const bordered = adj.every(a => {
+                        // Out of bounds or was shot as miss, or not a hit
+                        return myShots[a] !== undefined && myShots[a] === false || !hitSet.has(a);
+                    });
+                    // Actually for size 1, just check if it's surrounded by non-hits
+                    const noAdjacentHits = adj.every(a => !hitSet.has(a));
+                    if (noAdjacentHits && shipSizes.filter(s => s === 1).length > usedSizes.filter(s => s === 1).length) {
+                        usedSizes.push(1);
+                        group.forEach(c => sunk.add(c));
+                    }
+                } else {
+                    // For longer ships, check if both ends are capped by miss/OOB
+                    const sorted = [...group].sort((a, b) => {
+                        if (sameRow) return parseInt(a.slice(1), 10) - parseInt(b.slice(1), 10);
+                        return a.charCodeAt(0) - b.charCodeAt(0);
+                    });
+                    const first = sorted[0];
+                    const last = sorted[sorted.length - 1];
+                    const fRow = first.charCodeAt(0) - 'A'.charCodeAt(0);
+                    const fCol = parseInt(first.slice(1), 10) - 1;
+                    const lRow = last.charCodeAt(0) - 'A'.charCodeAt(0);
+                    const lCol = parseInt(last.slice(1), 10) - 1;
+
+                    let beforeKey: string | null = null;
+                    let afterKey: string | null = null;
+
+                    if (sameRow) {
+                        if (fCol > 0) beforeKey = `${String.fromCharCode('A'.charCodeAt(0) + fRow)}${fCol}`;
+                        if (lCol < BOARD_SIZE - 1) afterKey = `${String.fromCharCode('A'.charCodeAt(0) + lRow)}${lCol + 2}`;
+                    } else {
+                        if (fRow > 0) beforeKey = `${String.fromCharCode('A'.charCodeAt(0) + fRow - 1)}${fCol + 1}`;
+                        if (lRow < BOARD_SIZE - 1) afterKey = `${String.fromCharCode('A'.charCodeAt(0) + lRow + 1)}${lCol + 1}`;
+                    }
+
+                    // Both ends must be capped (miss, OOB, or edge of board)
+                    const beforeCapped = beforeKey === null || (myShots[beforeKey] !== undefined && !myShots[beforeKey]);
+                    const afterCapped = afterKey === null || (myShots[afterKey] !== undefined && !myShots[afterKey]);
+
+                    if (beforeCapped && afterCapped && shipSizes.includes(group.length)) {
+                        group.forEach(c => sunk.add(c));
+                    }
+                }
+            }
+        }
+        return sunk;
+    }, [myShots, oponenteBarcos]);
 
     useEffect(() => {
         if (estadoPartida === 'FINALIZADA' && partidaId && jugadorId) {
@@ -347,6 +502,11 @@ export default function TableroPage() {
                     }
                 }
                 setMyShots(mine);
+
+                // Capture opponent's ship positions (only returned when game is finished)
+                if (data.oponenteBarcos) {
+                    setOponenteBarcos(data.oponenteBarcos);
+                }
             }
         } catch { }
     }, [partidaId, jugadorId, isSpectator]);
@@ -361,6 +521,7 @@ export default function TableroPage() {
                 const pid = (data && (data.id ?? data.partidaId)) || null;
                 if (pid) {
                     setPartidaId(pid);
+                    setStarted(true);
                     if (!isSpectator) {
                         try { if (typeof window !== 'undefined') localStorage.setItem(`bship:partidaId:${params.id}`, String(pid)); } catch { }
                     }
@@ -379,6 +540,7 @@ export default function TableroPage() {
                     const pid = (data && (data.id ?? data.partidaId)) || null;
                     if (pid) {
                         setPartidaId(pid);
+                        setStarted(true);
                         if (!isSpectator) {
                             try { if (typeof window !== 'undefined') localStorage.setItem(`bship:partidaId:${params.id}`, String(pid)); } catch { }
                         }
@@ -439,12 +601,7 @@ export default function TableroPage() {
                     } catch { }
                 });
                 client.subscribe(`/topic/sala/${params.id}/estado`, (msg: IMessage) => {
-                    try {
-                        const body = JSON.parse(msg.body) as EstadoSalaMsg;
-                        setReadyCount(body.readyCount || 0);
-                        setStarted(Boolean(body.started));
-                        setDeadline(body.deadline ?? null);
-                    } catch { }
+                    // Ignore legacy JuegoService estado
                 });
                 client.subscribe(`/topic/sala/${params.id}/chat`, (msg: IMessage) => {
                     try {
@@ -460,25 +617,34 @@ export default function TableroPage() {
                         if (encontrada) setSala(encontrada);
                     }).catch(() => { });
 
-                    // Update game state (started, readyCount) and refresh turn
-                    axios.get(`${API_BASE}/api/juego/estado/${params.id}`).then(({ data }) => {
-                        setReadyCount(data.readyCount || 0);
-                        setStarted(Boolean(data.started));
-                        setDeadline(data.deadline ?? null);
-
-                        if (data.started) {
-                            // If started, ensure we have the game ID and refresh
-                            axios.get(`${API_BASE}/api/partidas/sala/${params.id}/activa`).then(({ data: activeData }) => {
-                                const pid = (activeData && (activeData.id ?? activeData.partidaId)) || null;
-                                if (pid) {
-                                    setPartidaId(pid);
-                                    refreshEstado(pid).catch(() => { });
+                    // Always try to find the active game for this sala
+                    axios.get(`${API_BASE}/api/partidas/sala/${params.id}/activa`).then(({ data: activeData }) => {
+                        const pid = (activeData && (activeData.id ?? activeData.partidaId)) || null;
+                        if (pid) {
+                            setStarted(true);
+                            setPartidaId((prevPid: number | null) => {
+                                if (prevPid !== null && prevPid !== pid) {
+                                    // New game started (rematch!) — reset all game state
+                                    setEstadoPartida('');
+                                    setGanadorId(null);
+                                    setRematchRequestJ1(false);
+                                    setRematchRequestJ2(false);
+                                    setRematchDeadline(null);
+                                    setPreparado(false);
+                                    setStarted(true);
+                                    setPlaced([]);
+                                    setMyShots({});
+                                    setReceivedShots({});
+                                    setFeed([]);
+                                    setScoreDetails(null);
                                 }
-                            }).catch(() => { });
-                        } else {
-                            refreshEstado().catch(() => { });
+                                return pid;
+                            });
+                            refreshEstado(pid).catch(() => { });
                         }
                     }).catch(() => { });
+
+                    // Ignore legacy update
                 });
             },
             onStompError: () => setWsConectado(false),
@@ -495,16 +661,7 @@ export default function TableroPage() {
     }, [jugadorId, params?.id, refreshEstado]);
 
     useEffect(() => {
-        const fetchEstado = async () => {
-            if (!params?.id) return;
-            try {
-                const { data } = await axios.get(`${API_BASE}/api/juego/estado/${params.id}`);
-                setReadyCount(data.readyCount || 0);
-                setStarted(Boolean(data.started));
-                setDeadline(data.deadline ?? null);
-            } catch { }
-        };
-        fetchEstado();
+        // Legacy fetch removed
     }, [params?.id, wsConectado]);
 
     const [spectatorName, setSpectatorName] = useState<string>('');
@@ -567,13 +724,25 @@ export default function TableroPage() {
 
     const salirSala = async () => {
         if (isSpectator) {
+            try { await axios.put(`${API_BASE}/api/sala/${params.id}/salirEspectador`); } catch { }
             router.push('/');
             return;
         }
         try {
             setLoading(true);
-            await axios.put(`${API_BASE}/api/sala/${params.id}/liberar`);
+            // If player is in a seat, liberate it first
+            if (miPuesto !== 0) {
+                await axios.put(`${API_BASE}/api/sala/${params.id}/puesto/${miPuesto}/liberar`);
+            }
+            // Also liberate via jugadorId for legacy cleanup
+            if (jugadorId) {
+                await axios.put(`${API_BASE}/api/sala/${params.id}/liberar`, null, {
+                    params: { jugadorId }
+                });
+            }
             localStorage.removeItem(`bship:jugadorId:${params.id}`);
+            localStorage.removeItem(`bship:partidaId:${params.id}`);
+            localStorage.removeItem('bship:currentRoomId');
             router.push('/');
         } catch (err: any) {
             setError(err?.response?.data?.message || 'No se pudo salir de la sala');
@@ -726,6 +895,29 @@ export default function TableroPage() {
         }
     };
 
+    const rechazarRevancha = async () => {
+        if (!partidaId || !jugadorId) return;
+        try {
+            await axios.post(`${API_BASE}/api/partidas/${partidaId}/revancha/rechazar`, null, {
+                params: { jugadorId }
+            });
+            // Reset local game state
+            setEstadoPartida('');
+            setGanadorId(null);
+            setRematchRequestJ1(false);
+            setRematchRequestJ2(false);
+            setRematchDeadline(null);
+            setPreparado(false);
+            setStarted(false);
+            setPlaced([]);
+            setMyShots({});
+            setReceivedShots({});
+            setFeed([]);
+        } catch (e) {
+            setError('Error al rechazar revancha');
+        }
+    };
+
     const remainingSec = deadline ? Math.max(0, Math.floor((deadline - now) / 1000)) : null;
     const rematchSec = rematchDeadline ? Math.max(0, Math.floor((rematchDeadline - now) / 1000)) : null;
 
@@ -816,10 +1008,10 @@ export default function TableroPage() {
                         <div className="flex flex-col items-center gap-4">
                             <button
                                 onClick={marcarListo}
-                                disabled={started}
+                                disabled={started || miPuesto === 0}
                                 className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
                             >
-                                {started ? 'Preparación en curso' : '¡Estoy Listo!'}
+                                {started ? 'Preparación en curso' : miPuesto === 0 ? 'Elige un puesto primero' : '¡Estoy Listo!'}
                             </button>
                             <div className="text-slate-300">
                                 Jugadores listos: <span className="font-bold text-white">{readyCount}/2</span>
@@ -927,20 +1119,36 @@ export default function TableroPage() {
                                                     }
                                                 }
 
+                                                const hasLeft = cIdx > 0 && isShip && (isSpectator ? tablerosPublicos[Object.keys(tablerosPublicos)[0] as any]?.[`${f}${colLabels[cIdx - 1]}`] : misBarcosMap[`${f}${colLabels[cIdx - 1]}`] || placedCells.has(`${f}${colLabels[cIdx - 1]}`));
+                                                const hasRight = cIdx < colLabels.length - 1 && isShip && (isSpectator ? tablerosPublicos[Object.keys(tablerosPublicos)[0] as any]?.[`${f}${colLabels[cIdx + 1]}`] : misBarcosMap[`${f}${colLabels[cIdx + 1]}`] || placedCells.has(`${f}${colLabels[cIdx + 1]}`));
+                                                const hasTop = rIdx > 0 && isShip && (isSpectator ? tablerosPublicos[Object.keys(tablerosPublicos)[0] as any]?.[`${filaLabels[rIdx - 1]}${c}`] : misBarcosMap[`${filaLabels[rIdx - 1]}${c}`] || placedCells.has(`${filaLabels[rIdx - 1]}${c}`));
+                                                const hasBottom = rIdx < filaLabels.length - 1 && isShip && (isSpectator ? tablerosPublicos[Object.keys(tablerosPublicos)[0] as any]?.[`${filaLabels[rIdx + 1]}${c}`] : misBarcosMap[`${filaLabels[rIdx + 1]}${c}`] || placedCells.has(`${filaLabels[rIdx + 1]}${c}`));
+
+                                                let shipRounded = 'rounded-sm';
+                                                if (isShip) {
+                                                    if (!hasLeft && hasRight && !hasTop && !hasBottom) shipRounded = 'rounded-l-full rounded-r-md';
+                                                    else if (hasLeft && !hasRight && !hasTop && !hasBottom) shipRounded = 'rounded-r-full rounded-l-md';
+                                                    else if (!hasTop && hasBottom && !hasLeft && !hasRight) shipRounded = 'rounded-t-full rounded-b-md';
+                                                    else if (hasTop && !hasBottom && !hasLeft && !hasRight) shipRounded = 'rounded-b-full rounded-t-md';
+                                                    else if (hasLeft && hasRight && !hasTop && !hasBottom) shipRounded = 'rounded-none border-y border-blue-400 bg-gradient-to-r from-blue-500 to-blue-500';
+                                                    else if (hasTop && hasBottom && !hasLeft && !hasRight) shipRounded = 'rounded-none border-x border-blue-400 bg-gradient-to-b from-blue-500 to-blue-500';
+                                                    else if (!hasTop && !hasBottom && !hasLeft && !hasRight) shipRounded = 'rounded-full border-2 border-blue-400 bg-blue-500';
+                                                }
+
                                                 return (
                                                     <button
                                                         key={key}
                                                         type="button"
                                                         onClick={() => !isSpectator && !preparado && placeSelectedShip(key)}
                                                         onContextMenu={(e) => { e.preventDefault(); !isSpectator && !preparado && setOrientation(o => (o === 'H' ? 'V' : 'H')); }}
-                                                        className={`w-8 h-8 flex items-center justify-center text-sm transition-all duration-200 relative
-                                                            ${isShip ? 'bg-blue-500/80 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-slate-800/50 hover:bg-slate-700'}
-                                                            ${!isSpectator && !preparado ? 'cursor-pointer' : 'cursor-default'}
+                                                        className={`w-8 h-8 flex items-center justify-center text-sm transition-all duration-300 relative
+                                                            ${isShip ? `${shipRounded} bg-gradient-to-br from-blue-400 to-blue-600 shadow-[0_0_8px_rgba(59,130,246,0.6)] border border-blue-300/50` : 'bg-slate-800/60 hover:bg-slate-700/80 rounded-sm'}
+                                                            ${!isSpectator && !preparado ? 'cursor-crosshair hover:scale-105' : 'cursor-default'}
                                                         `}
                                                         title={key}
                                                     >
-                                                        {isHit && <span className="absolute inset-0 flex items-center justify-center text-red-500 font-bold text-lg animate-bounce">✕</span>}
-                                                        {isMiss && <div className="w-2 h-2 rounded-full bg-slate-400" />}
+                                                        {isHit && <span className="absolute inset-0 flex items-center justify-center text-red-500 font-black text-xl animate-bounce drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]">✕</span>}
+                                                        {isMiss && <div className="w-3 h-3 rounded-full bg-slate-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]" />}
                                                     </button>
                                                 );
                                             })}
@@ -991,11 +1199,12 @@ export default function TableroPage() {
                                         {colLabels.map(c => (
                                             <div key={`eh${c}`} className="text-center text-xs font-medium text-slate-400 py-2">{c}</div>
                                         ))}
-                                        {filaLabels.map((f) => (
+                                        {filaLabels.map((f, fIdx) => (
                                             <Fragment key={`erow-${f}`}>
                                                 <div key={`er-${f}`} className="text-center text-xs font-medium text-slate-400 py-2 px-1">{f}</div>
-                                                {colLabels.map((c) => {
-                                                    const key = `${f}${c}`;
+                                                {colLabels.map((cStr, cIdx) => {
+                                                    const cNum = Number(cStr);
+                                                    const key = `${f}${cStr}`;
                                                     let shot: boolean | undefined;
                                                     let isSelected = false;
 
@@ -1012,8 +1221,27 @@ export default function TableroPage() {
                                                     }
 
                                                     const isHoveredRow = hoveredCell && hoveredCell.startsWith(f);
-                                                    const isHoveredCol = hoveredCell && hoveredCell.endsWith(String(c));
+                                                    const isHoveredCol = hoveredCell && hoveredCell.endsWith(String(cStr));
                                                     const isCrosshair = isHoveredRow || isHoveredCol;
+
+                                                    const isSunk = sunkCells.has(key);
+                                                    const isSunkShip = isSunk && oponenteBarcos && oponenteBarcos[key];
+
+                                                    const hasLeft = cIdx > 0 && isSunkShip && oponenteBarcos[`${f}${colLabels[cIdx - 1]}`];
+                                                    const hasRight = cIdx < colLabels.length - 1 && isSunkShip && oponenteBarcos[`${f}${colLabels[cIdx + 1]}`];
+                                                    const hasTop = fIdx > 0 && isSunkShip && oponenteBarcos[`${filaLabels[fIdx - 1]}${cStr}`];
+                                                    const hasBottom = fIdx < filaLabels.length - 1 && isSunkShip && oponenteBarcos[`${filaLabels[fIdx + 1]}${cStr}`];
+
+                                                    let shipRounded = 'rounded-sm';
+                                                    if (isSunkShip) {
+                                                        if (!hasLeft && hasRight && !hasTop && !hasBottom) shipRounded = 'rounded-l-full rounded-r-md';
+                                                        else if (hasLeft && !hasRight && !hasTop && !hasBottom) shipRounded = 'rounded-r-full rounded-l-md';
+                                                        else if (!hasTop && hasBottom && !hasLeft && !hasRight) shipRounded = 'rounded-t-full rounded-b-md';
+                                                        else if (hasTop && !hasBottom && !hasLeft && !hasRight) shipRounded = 'rounded-b-full rounded-t-md';
+                                                        else if (hasLeft && hasRight && !hasTop && !hasBottom) shipRounded = 'rounded-none border-y border-orange-400 bg-gradient-to-r from-orange-500 to-orange-500';
+                                                        else if (hasTop && hasBottom && !hasLeft && !hasRight) shipRounded = 'rounded-none border-x border-orange-400 bg-gradient-to-b from-orange-500 to-orange-500';
+                                                        else if (!hasTop && !hasBottom && !hasLeft && !hasRight) shipRounded = 'rounded-full border-2 border-orange-400 bg-orange-500';
+                                                    }
 
                                                     return (
                                                         <button
@@ -1026,13 +1254,17 @@ export default function TableroPage() {
                                                             className={`w-8 h-8 flex items-center justify-center text-sm transition-all duration-200 relative
                                                                 ${isSelected ? 'ring-2 ring-red-500 z-10' : ''}
                                                                 ${shot === undefined ? (isCrosshair ? 'bg-slate-700' : 'bg-slate-800/50 hover:bg-slate-700') : ''}
-                                                                ${shot === true ? 'bg-red-500/20' : ''}
+                                                                ${isSunkShip ? `${shipRounded} bg-gradient-to-br from-orange-500 to-red-600 shadow-[0_0_12px_rgba(249,115,22,0.8)] border border-orange-300` : ''}
+                                                                ${shot === true && !isSunkShip ? 'bg-red-500/20' : ''}
                                                                 ${shot === false ? 'bg-slate-800/80' : ''}
                                                                 ${!isSpectator && esMiTurno && oponenteListo && shot === undefined ? 'cursor-crosshair' : 'cursor-default'}
                                                             `}
-                                                            title={key}
+                                                            title={isSunk ? `${key} - ¡HUNDIDO!` : key}
                                                         >
-                                                            {shot === true && (
+                                                            {shot === true && isSunk && (
+                                                                <span className="absolute inset-0 flex items-center justify-center text-orange-400 font-bold text-base">🔥</span>
+                                                            )}
+                                                            {shot === true && !isSunk && (
                                                                 <span className="absolute inset-0 flex items-center justify-center text-red-500 font-bold text-lg animate-bounce">✕</span>
                                                             )}
                                                             {shot === false && (
@@ -1126,84 +1358,110 @@ export default function TableroPage() {
                 </div>
 
                 {/* Game Over / Rematch UI */}
-                {estadoPartida === 'FINALIZADA' && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                        <div className="bg-slate-900 border border-slate-700 p-8 rounded-2xl max-w-md w-full text-center space-y-6 shadow-2xl">
-                            <h2 className="text-4xl font-black text-white mb-2">
-                                {ganadorId === jugadorId ? '¡VICTORIA!' : 'DERROTA'}
-                            </h2>
-                            <div className="text-slate-400">
-                                {ganadorId === jugadorId ? 'Has dominado los mares.' : 'Mejor suerte la próxima vez.'}
-                            </div>
+                {
+                    estadoPartida === 'FINALIZADA' && miPuesto !== 0 && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                            <div className="bg-slate-900 border border-slate-700 p-8 rounded-2xl max-w-md w-full text-center space-y-6 shadow-2xl">
+                                <h2 className="text-4xl font-black text-white mb-2">
+                                    {ganadorId === jugadorId ? '¡VICTORIA!' : 'DERROTA'}
+                                </h2>
+                                <div className="text-slate-400">
+                                    {ganadorId === jugadorId ? 'Has dominado los mares.' : 'Mejor suerte la próxima vez.'}
+                                </div>
 
-                            {scoreDetails && (
-                                <div className="bg-slate-800/50 rounded-lg p-4 text-sm space-y-2 text-left">
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">Puntos Base</span>
-                                        <span className="font-bold text-white">{scoreDetails.puntosBase}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">Precisión</span>
-                                        <span className="font-bold text-blue-400">+{scoreDetails.puntosPrecision}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">Barcos Hundidos</span>
-                                        <span className="font-bold text-red-400">+{scoreDetails.puntosBarcos}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">Supervivencia</span>
-                                        <span className="font-bold text-green-400">+{scoreDetails.puntosSupervivencia}</span>
-                                    </div>
-                                    {scoreDetails.puntosRacha > 0 && (
+                                {scoreDetails && (
+                                    <div className="bg-slate-800/50 rounded-lg p-4 text-sm space-y-2 text-left">
                                         <div className="flex justify-between">
-                                            <span className="text-slate-400">Racha de Victorias</span>
-                                            <span className="font-bold text-yellow-400">+{scoreDetails.puntosRacha}</span>
+                                            <span className="text-slate-400">Puntos Base</span>
+                                            <span className="font-bold text-white">{scoreDetails.puntosBase}</span>
                                         </div>
-                                    )}
-                                    <div className="border-t border-slate-700 pt-2 mt-2 flex justify-between text-lg">
-                                        <span className="font-bold text-slate-200">Total PR</span>
-                                        <span className="font-bold text-white">{scoreDetails.total}</span>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">Precisión</span>
+                                            <span className="font-bold text-blue-400">+{scoreDetails.puntosPrecision}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">Barcos Hundidos</span>
+                                            <span className="font-bold text-red-400">+{scoreDetails.puntosBarcos}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">Supervivencia</span>
+                                            <span className="font-bold text-green-400">+{scoreDetails.puntosSupervivencia}</span>
+                                        </div>
+                                        {scoreDetails.puntosRacha > 0 && (
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-400">Racha de Victorias</span>
+                                                <span className="font-bold text-yellow-400">+{scoreDetails.puntosRacha}</span>
+                                            </div>
+                                        )}
+                                        <div className="border-t border-slate-700 pt-2 mt-2 flex justify-between text-lg">
+                                            <span className="font-bold text-slate-200">Total PR</span>
+                                            <span className="font-bold text-white">{scoreDetails.total}</span>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                            {rematchSec !== null && (
-                                <div className="text-2xl font-bold text-yellow-400 animate-pulse">
-                                    Revancha expira en: {rematchSec}s
-                                </div>
-                            )}
-
-                            <div className="flex flex-col gap-3">
-                                {!isSpectator && (
-                                    <>
-                                        <button
-                                            onClick={solicitarRevancha}
-                                            disabled={rematchRequestJ1 && miPuesto === 1 || rematchRequestJ2 && miPuesto === 2}
-                                            className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all transform hover:scale-105"
-                                        >
-                                            {(miPuesto === 1 && rematchRequestJ1) || (miPuesto === 2 && rematchRequestJ2)
-                                                ? 'Esperando oponente...'
-                                                : 'Solicitar Revancha'}
-                                        </button>
-                                        <button
-                                            onClick={() => liberarPuesto(miPuesto)}
-                                            className="w-full py-3 rounded-lg border border-slate-600 hover:bg-slate-800 text-slate-300 font-medium transition-colors"
-                                        >
-                                            Dejar Puesto
-                                        </button>
-                                    </>
                                 )}
-                                <button
-                                    onClick={() => router.push('/')}
-                                    className="w-full py-2 text-slate-500 hover:text-slate-400 text-sm"
-                                >
-                                    Volver al Menú
-                                </button>
+                                {rematchSec !== null && rematchSec > 0 && (
+                                    <div className="text-2xl font-bold text-yellow-400 animate-pulse">
+                                        Revancha expira en: {rematchSec}s
+                                    </div>
+                                )}
+
+                                {/* Show opponent rematch request */}
+                                {((miPuesto === 1 && rematchRequestJ2) || (miPuesto === 2 && rematchRequestJ1)) && (
+                                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                                        <div className="text-emerald-400 font-bold mb-2">¡Tu oponente quiere revancha!</div>
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={solicitarRevancha}
+                                                className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all"
+                                            >
+                                                Aceptar
+                                            </button>
+                                            <button
+                                                onClick={rechazarRevancha}
+                                                className="flex-1 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all"
+                                            >
+                                                Rechazar
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col gap-3">
+                                    {!isSpectator && (
+                                        <>
+                                            {/* Show solicitar revancha button only if opponent hasn't requested yet */}
+                                            {!((miPuesto === 1 && rematchRequestJ2) || (miPuesto === 2 && rematchRequestJ1)) && (
+                                                <button
+                                                    onClick={solicitarRevancha}
+                                                    disabled={(rematchRequestJ1 && miPuesto === 1) || (rematchRequestJ2 && miPuesto === 2)}
+                                                    className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
+                                                >
+                                                    {(miPuesto === 1 && rematchRequestJ1) || (miPuesto === 2 && rematchRequestJ2)
+                                                        ? 'Esperando oponente...'
+                                                        : 'Solicitar Revancha'}
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={rechazarRevancha}
+                                                className="w-full py-3 rounded-lg border border-slate-600 hover:bg-slate-800 text-slate-300 font-medium transition-colors"
+                                            >
+                                                Dejar Puesto
+                                            </button>
+                                        </>
+                                    )}
+                                    <button
+                                        onClick={salirSala}
+                                        className="w-full py-2 text-slate-500 hover:text-slate-400 text-sm"
+                                    >
+                                        Volver al Menú
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
-            </div>
+            </div >
         </div >
     );
 }

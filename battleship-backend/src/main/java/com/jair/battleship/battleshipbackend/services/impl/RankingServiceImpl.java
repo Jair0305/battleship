@@ -30,6 +30,9 @@ public class RankingServiceImpl implements RankingService {
     private ParticipacionRepository participacionRepository;
 
     @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
     @Override
@@ -107,7 +110,7 @@ public class RankingServiceImpl implements RankingService {
 
         // No negativos
         Integer puntajeActual = puntuacionRepository.findGlobalLeaderboard(PageRequest.of(0, 1000)).stream()
-                .filter(obj -> ((Long) obj[0]).equals(jugador.getId()))
+                .filter(obj -> jugador.getNombre().equals(obj[0]))
                 .map(obj -> ((Number) obj[2]).intValue())
                 .findFirst()
                 .orElse(0);
@@ -177,30 +180,19 @@ public class RankingServiceImpl implements RankingService {
 
     @Override
     public List<Map<String, Object>> obtenerRanking(String periodo) {
-        Instant startDate = Instant.EPOCH;
-        if ("dia".equalsIgnoreCase(periodo)) {
-            startDate = Instant.now().truncatedTo(ChronoUnit.DAYS);
-        } else if ("semana".equalsIgnoreCase(periodo)) {
-            startDate = Instant.now().minus(7, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
-        } else if ("mes".equalsIgnoreCase(periodo)) {
-            startDate = Instant.now().minus(30, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS);
-        }
-
-        List<Object[]> results;
-        if ("historico".equalsIgnoreCase(periodo)) {
-            results = puntuacionRepository.findGlobalLeaderboard(PageRequest.of(0, 10));
-        } else {
-            results = puntuacionRepository.findLeaderboardSince(startDate, PageRequest.of(0, 10));
-        }
-
         List<Map<String, Object>> ranking = new ArrayList<>();
         int rank = 1;
-        for (Object[] row : results) {
+        var users = usuarioRepository.findAll().stream()
+                .sorted(Comparator.comparingInt(Usuario::getRating).reversed()
+                        .thenComparing(Usuario::getUsername))
+                .limit(10)
+                .toList();
+        for (Usuario usuario : users) {
             Map<String, Object> item = new HashMap<>();
             item.put("rank", rank++);
-            item.put("jugadorId", row[0]);
-            item.put("nombre", row[1]);
-            item.put("puntos", row[2] != null ? ((Number) row[2]).intValue() : 0);
+            item.put("jugadorId", usuario.getId());
+            item.put("nombre", usuario.getUsername());
+            item.put("puntos", usuario.getRating());
             ranking.add(item);
         }
         return ranking;

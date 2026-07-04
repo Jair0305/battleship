@@ -21,7 +21,6 @@ public class Tablero {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "jugador_id")
@@ -34,6 +33,11 @@ public class Tablero {
     // Posiciones donde hay barcos colocados
     @ElementCollection
     private Map<String, Boolean> posicionesBarcos = new HashMap<>();
+
+    // Ship identity per occupied cell, e.g. A1 -> carrier. Kept server-side so
+    // sunk detection is authoritative.
+    @ElementCollection
+    private Map<String, String> barcosPorCelda = new HashMap<>();
 
     // Posiciones que ya fueron atacadas en esta partida
     @ElementCollection

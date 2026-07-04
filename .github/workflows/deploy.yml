@@ -1,0 +1,150 @@
+name: Build and deploy Battleship
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  BACKEND_IMAGE: ghcr.io/jair0305/battleship-backend
+  FRONTEND_IMAGE: ghcr.io/jair0305/battleship-frontend
+
+jobs:
+  build-and-push:
+    name: Build, test and push images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Test backend
+        working-directory: battleship-backend
+        run: |
+          chmod +x mvnw
+          ./mvnw test
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: battleship-frontend/package-lock.json
+
+      - name: Verify frontend
+        working-directory: battleship-frontend
+        run: |
+          npm ci
+          npm audit --audit-level=moderate
+          npm run lint
+          npm run build
+          npx tsc --noEmit --incremental false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./battleship-backend
+          file: ./battleship-backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            ${{ env.BACKEND_IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./battleship-frontend
+          file: ./battleship-frontend/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_BASE=
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            ${{ env.FRONTEND_IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  deploy:
+    name: Deploy to sentinel
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout deploy files
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/battleship_deploy_key
+          chmod 600 ~/.ssh/battleship_deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload compose assets
+        run: |
+          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" "mkdir -p /opt/battleship"
+          scp -i ~/.ssh/battleship_deploy_key deploy/docker-compose.yml deploy/nginx.conf deploy/mssql-init.sh "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:/opt/battleship/"
+
+      - name: Pull and restart Battleship stack
+        run: |
+          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/battleship
+          chmod +x mssql-init.sh
+          cat > .env <<'ENV'
+          BACKEND_IMAGE=${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          MSSQL_SA_PASSWORD=${{ secrets.MSSQL_SA_PASSWORD }}
+          ENV
+          printf '%s\n' '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+          docker compose --env-file .env -f docker-compose.yml pull
+          docker compose --env-file .env -f docker-compose.yml up -d
+          docker compose --env-file .env -f docker-compose.yml ps
+          REMOTE
+
+      - name: Verify deployed service
+        run: |
+          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" <<'REMOTE'
+          set -euo pipefail
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3006/api/lobby >/tmp/battleship-lobby.json; then
+              curl -fsS http://127.0.0.1:3006/ >/tmp/battleship-home.html
+              exit 0
+            fi
+            sleep 3
+          done
+          cd /opt/battleship
+          docker compose --env-file .env -f docker-compose.yml ps
+          docker logs --tail=120 battleship-backend || true
+          docker logs --tail=120 battleship-nginx || true
+          exit 1
+          REMOTE

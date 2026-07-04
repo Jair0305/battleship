@@ -1,0 +1,8 @@
+.agents
+.next
+node_modules
+npm-debug.log*
+Dockerfile
+README.md
+skills-lock.json
+tsconfig.tsbuildinfo

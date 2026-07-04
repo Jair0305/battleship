@@ -1,7 +1,9 @@
 package com.jair.battleship.battleshipbackend.controllers;
 
 import com.jair.battleship.battleshipbackend.models.entities.Usuario;
+import com.jair.battleship.battleshipbackend.models.dto.multiplayer.SessionUser;
 import com.jair.battleship.battleshipbackend.services.AuthService;
+import com.jair.battleship.battleshipbackend.services.MultiplayerService;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -11,15 +13,18 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     @Autowired private AuthService authService;
+    @Autowired private MultiplayerService multiplayerService;
 
     @PostMapping("/register")
-    public Usuario register(@RequestBody RegisterRequest req) {
-        return authService.register(req.getUsername(), req.getPassword(), req.getPasswordConfirm());
+    public SessionUser register(@RequestBody RegisterRequest req) {
+        Usuario usuario = authService.register(req.getUsername(), req.getPassword(), req.getPasswordConfirm());
+        return multiplayerService.createSessionForUser(usuario);
     }
 
     @PostMapping("/login")
-    public Usuario login(@RequestBody LoginRequest req) {
-        return authService.login(req.getUsername(), req.getPassword());
+    public SessionUser login(@RequestBody LoginRequest req) {
+        Usuario usuario = authService.login(req.getUsername(), req.getPassword());
+        return multiplayerService.createSessionForUser(usuario);
     }
 
     @Data

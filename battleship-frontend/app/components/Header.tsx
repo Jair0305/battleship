@@ -1,63 +1,89 @@
 "use client";
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createGuest, getStoredSession, logout } from "../lib/api";
+import type { SessionUser } from "../lib/types";
 
 export default function Header() {
-  const [user, setUser] = useState<any>(null);
+  const [session, setSession] = useState<SessionUser | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('bship:user') : null;
-    setUser(raw ? JSON.parse(raw) : null);
-
-    const onStorage = () => {
-      const newRaw = localStorage.getItem('bship:user');
-      setUser(newRaw ? JSON.parse(newRaw) : null);
+    const load = () => setSession(getStoredSession());
+    load();
+    window.addEventListener("bship:session", load);
+    window.addEventListener("storage", load);
+    return () => {
+      window.removeEventListener("bship:session", load);
+      window.removeEventListener("storage", load);
     };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const logout = () => {
-    localStorage.removeItem('bship:user');
-    setUser(null);
-    // Avisar a otros tabs/componentes
-    window.dispatchEvent(new StorageEvent('storage', { key: 'bship:user' }));
+  const enterAsGuest = async () => {
+    setBusy(true);
+    try {
+      setSession(await createGuest());
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const signOut = () => {
+    logout();
+    setSession(null);
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
-          <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
+    <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/90 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+        <Link href="/" className="flex items-center gap-2 text-xl font-bold text-cyan-200">
+          <span className="grid h-8 w-8 place-items-center rounded border border-cyan-500/40 bg-cyan-500/10 text-sm">
+            BS
+          </span>
           Battleship
         </Link>
-        <nav className="flex gap-6 items-center">
-          {user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-400">
-                Comandante <strong className="text-white font-medium">{user.username}</strong>
-              </span>
+
+        <nav className="flex items-center gap-3">
+          {session ? (
+            <>
+              <div className="hidden text-right text-sm sm:block">
+                <div className="text-slate-200">{session.displayName}</div>
+                <div className="text-xs text-slate-500">
+                  {session.guest ? "Invitado" : `Rating ${session.rating ?? 1200}`}
+                </div>
+              </div>
+              {!session.guest && (
+                <span className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-200">
+                  {session.wins ?? 0}W / {session.losses ?? 0}L
+                </span>
+              )}
               <button
-                onClick={logout}
-                className="px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 border border-red-500/30 hover:bg-red-500/10 rounded-lg transition-all"
+                onClick={signOut}
+                className="rounded border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800"
               >
-                Cerrar Sesión
+                Salir
               </button>
-            </div>
+            </>
           ) : (
-            <div className="flex items-center gap-4">
-              <Link href="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
-                Iniciar Sesión
+            <>
+              <button
+                onClick={enterAsGuest}
+                disabled={busy}
+                className="rounded bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-60"
+              >
+                {busy ? "Entrando..." : "Invitado"}
+              </button>
+              <Link href="/login" className="text-sm text-slate-300 transition hover:text-white">
+                Iniciar sesion
               </Link>
               <Link
                 href="/register"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-lg shadow-blue-500/20 transition-all"
+                className="rounded border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800"
               >
-                Registrarse
+                Registro
               </Link>
-            </div>
+            </>
           )}
         </nav>
       </div>

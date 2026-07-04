@@ -81,7 +81,7 @@ export default function Leaderboard() {
                 ) : (
                     ranking.map((item) => (
                         <div
-                            key={item.jugadorId}
+                            key={`${item.nombre}-${item.rank}`}
                             className={`flex items-center justify-between p-2 rounded-lg border ${item.rank === 1
                                 ? "bg-yellow-500/10 border-yellow-500/30"
                                 : item.rank === 2

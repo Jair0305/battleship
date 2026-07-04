@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface DisparoRepository extends JpaRepository<Disparo, Long> {
     List<Disparo> findByPartidaIdOrderByTimestampAsc(Long partidaId);
     Optional<Disparo> findTopByPartidaIdOrderByTimestampDesc(Long partidaId);
+    boolean existsByPartidaIdAndAtacanteIdAndPosicion(Long partidaId, Long atacanteId, String posicion);
+    long countByPartidaId(Long partidaId);
 }

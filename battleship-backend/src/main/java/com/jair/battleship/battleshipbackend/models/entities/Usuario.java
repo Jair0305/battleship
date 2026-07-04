@@ -27,5 +27,10 @@ public class Usuario {
     @Column(nullable = false)
     private String passwordHash;
 
+    private int rating = 1200;
+    private int gamesPlayed = 0;
+    private int wins = 0;
+    private int losses = 0;
+
     private Instant createdAt = Instant.now();
 }

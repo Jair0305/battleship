@@ -1,5 +1,8 @@
 package com.jair.battleship.battleshipbackend.config;
 
+import java.util.Arrays;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -7,6 +10,9 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Value("${app.allowed-origin-patterns}")
+    private String allowedOriginPatterns;
 
     @Override
     public void configureMessageBroker(org.springframework.messaging.simp.config.MessageBrokerRegistry config) {
@@ -16,11 +22,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(org.springframework.web.socket.config.annotation.StompEndpointRegistry registry) {
-        // No se puede usar "*" con credenciales; usar patrones/orígenes explícitos.
-        registry.addEndpoint("/ws").setAllowedOriginPatterns(
-            "http://localhost:3002",
-            "http://localhost:3001",
-            "http://localhost:3000"
-        ).withSockJS();
+        registry.addEndpoint("/ws")
+            .setAllowedOriginPatterns(parseAllowedOriginPatterns())
+            .withSockJS();
+    }
+
+    private String[] parseAllowedOriginPatterns() {
+        return Arrays.stream(allowedOriginPatterns.split(","))
+            .map(String::trim)
+            .filter(origin -> !origin.isBlank())
+            .toArray(String[]::new);
     }
 }

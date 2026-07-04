@@ -22,6 +22,19 @@ public class Jugador {
     private String nombre;
     private int puntuacion;
 
+    // Link to the authenticated user (so the same person reuses their stats)
+    @Column(name = "username")
+    private String username;
+
+    @Column(name = "session_token", length = 96)
+    private String sessionToken;
+
+    private boolean invitado = true;
+
+    @ManyToOne
+    @JoinColumn(name = "usuario_id")
+    private Usuario usuario;
+
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "sala_id")
