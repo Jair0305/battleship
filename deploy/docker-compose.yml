@@ -2,53 +2,38 @@ name: battleship
 
 services:
   db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: postgres:16-alpine
     container_name: battleship-db
     restart: unless-stopped
     environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_PID: Express
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      POSTGRES_DB: battleship
+      POSTGRES_USER: battleship
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - battleship_mssql_data:/var/opt/mssql
+      - battleship_postgres_data:/var/lib/postgresql/data
     networks:
       - battleship
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/1433'"]
+      test: ["CMD-SHELL", "pg_isready -U battleship -d battleship"]
       interval: 10s
       timeout: 5s
       retries: 30
       start_period: 30s
-
-  db-init:
-    image: mcr.microsoft.com/mssql-tools
-    container_name: battleship-db-init
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
-    volumes:
-      - ./mssql-init.sh:/mssql-init.sh:ro
-    networks:
-      - battleship
-    entrypoint: ["/bin/bash", "/mssql-init.sh"]
-    restart: "no"
 
   backend:
     image: ${BACKEND_IMAGE}
     container_name: battleship-backend
     restart: unless-stopped
     depends_on:
-      db-init:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     environment:
       SERVER_PORT: "8080"
-      SPRING_DATASOURCE_URL: "jdbc:sqlserver://battleship-db:1433;databaseName=battleship;encrypt=true;trustServerCertificate=true;loginTimeout=30;"
-      SPRING_DATASOURCE_USERNAME: sa
-      SPRING_DATASOURCE_PASSWORD: ${MSSQL_SA_PASSWORD}
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.microsoft.sqlserver.jdbc.SQLServerDriver
-      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.SQLServerDialect
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://battleship-db:5432/battleship"
+      SPRING_DATASOURCE_USERNAME: battleship
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_H2_CONSOLE_ENABLED: "false"
       APP_ALLOWED_ORIGIN_PATTERNS: "http://battleship.nightly.mx,http://battleship.nightly.mx:3006,https://battleship.nightly.mx,http://40.233.30.181:3006,http://localhost:3006,http://localhost:3000,http://localhost:3001,http://localhost:3002"
@@ -90,5 +75,5 @@ networks:
     name: battleship
 
 volumes:
-  battleship_mssql_data:
-    name: battleship_mssql_data
+  battleship_postgres_data:
+    name: battleship_postgres_data
