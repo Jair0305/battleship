@@ -111,7 +111,7 @@ jobs:
 
       - name: Upload compose assets
         run: |
-          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" "mkdir -p /opt/battleship"
+          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" "sudo mkdir -p /opt/battleship && sudo chown ${{ secrets.DEPLOY_SSH_USER }}:${{ secrets.DEPLOY_SSH_USER }} /opt/battleship"
           scp -i ~/.ssh/battleship_deploy_key deploy/docker-compose.yml deploy/nginx.conf deploy/mssql-init.sh "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:/opt/battleship/"
 
       - name: Pull and restart Battleship stack
