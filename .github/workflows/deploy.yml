@@ -138,10 +138,13 @@ jobs:
       - name: Verify deployed service
         run: |
           ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" <<'REMOTE'
-          set -euo pipefail
-          for attempt in $(seq 1 90); do
-            if curl -fsS http://127.0.0.1:3006/api/lobby >/tmp/battleship-lobby.json; then
-              curl -fsS http://127.0.0.1:3006/ >/tmp/battleship-home.html
+          set -uo pipefail
+          for attempt in $(seq 1 120); do
+            curl -fsS http://127.0.0.1:3006/api/lobby >/tmp/battleship-lobby.json
+            api_status=$?
+            curl -fsS http://127.0.0.1:3006/ >/tmp/battleship-home.html
+            home_status=$?
+            if [ "$api_status" -eq 0 ] && [ "$home_status" -eq 0 ]; then
               exit 0
             fi
             sleep 3
