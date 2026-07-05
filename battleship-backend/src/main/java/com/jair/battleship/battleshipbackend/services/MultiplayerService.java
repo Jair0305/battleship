@@ -24,7 +24,13 @@ import java.util.stream.Collectors;
 public class MultiplayerService {
 
     public static final int BOARD_SIZE = 10;
-    private static final int ELO_K = 32;
+    private static final int RATING_FLOOR = 100;
+    private static final int PROVISIONAL_GAMES = 10;
+    private static final int K_PROVISIONAL = 40;
+    private static final int K_ESTABLISHED = 24;
+    private static final int K_HIGH_RATED = 20;
+    private static final int HIGH_RATING_THRESHOLD = 1800;
+    private static final int MAX_RATING_DELTA = 36;
     private static final String RULESET = "SEA_BATTLE_2_CLASSIC";
     private static final Duration READY_LIMIT = Duration.ofSeconds(15);
     private static final Duration PLACEMENT_LIMIT = Duration.ofSeconds(60);
@@ -1091,9 +1097,7 @@ public class MultiplayerService {
             lose.setResultado(ResultadoParticipacion.PERDIO);
             participacionRepository.save(lose);
         }
-        if (!abandono) {
-            applyRatingOnce(partida, ganador, perdedor);
-        }
+        applyRatingOnce(partida, ganador, perdedor);
     }
 
     private void applyRatingOnce(Partida partida, Jugador ganador, Jugador perdedor) {
@@ -1104,21 +1108,37 @@ public class MultiplayerService {
         Usuario loseUser = usuarioRepository.findById(perdedor.getUsuario().getId()).orElseThrow();
         int winnerOld = winUser.getRating();
         int loserOld = loseUser.getRating();
-        double expectedWin = 1.0 / (1.0 + Math.pow(10.0, (loserOld - winnerOld) / 400.0));
-        int delta = (int) Math.round(ELO_K * (1.0 - expectedWin));
-        winUser.setRating(winnerOld + delta);
-        loseUser.setRating(Math.max(100, loserOld - delta));
+        int delta = ratingDelta(winnerOld, loserOld, winUser.getGamesPlayed(), loseUser.getGamesPlayed());
+        int actualDelta = Math.min(delta, Math.max(0, loserOld - RATING_FLOOR));
+
+        winUser.setRating(winnerOld + actualDelta);
+        loseUser.setRating(loserOld - actualDelta);
         winUser.setGamesPlayed(winUser.getGamesPlayed() + 1);
         loseUser.setGamesPlayed(loseUser.getGamesPlayed() + 1);
         winUser.setWins(winUser.getWins() + 1);
         loseUser.setLosses(loseUser.getLosses() + 1);
         usuarioRepository.save(winUser);
         usuarioRepository.save(loseUser);
+        ganador.setPuntuacion(winUser.getRating());
+        perdedor.setPuntuacion(loseUser.getRating());
+        jugadorRepository.save(ganador);
+        jugadorRepository.save(perdedor);
+
+        Participacion win = participacionRepository.findByPartidaIdAndJugadorId(partida.getId(), ganador.getId()).orElse(null);
+        Participacion lose = participacionRepository.findByPartidaIdAndJugadorId(partida.getId(), perdedor.getId()).orElse(null);
+        if (win != null) {
+            win.setPuntosObtenidos(actualDelta);
+            participacionRepository.save(win);
+        }
+        if (lose != null) {
+            lose.setPuntosObtenidos(-actualDelta);
+            participacionRepository.save(lose);
+        }
 
         Puntuacion pWin = new Puntuacion();
         pWin.setJugador(ganador);
         pWin.setPartida(partida);
-        pWin.setPuntosBase(delta);
+        pWin.setPuntosBase(actualDelta);
         pWin.setTotal(winUser.getRating());
         pWin.setFecha(Instant.now());
         puntuacionRepository.save(pWin);
@@ -1126,13 +1146,35 @@ public class MultiplayerService {
         Puntuacion pLose = new Puntuacion();
         pLose.setJugador(perdedor);
         pLose.setPartida(partida);
-        pLose.setPuntosBase(-delta);
+        pLose.setPuntosBase(-actualDelta);
         pLose.setTotal(loseUser.getRating());
         pLose.setFecha(Instant.now());
         puntuacionRepository.save(pLose);
 
         partida.setRatingProcessed(true);
         partidaRepository.save(partida);
+        broadcastRankingUpdate();
+    }
+
+    private int ratingDelta(int winnerRating, int loserRating, int winnerGames, int loserGames) {
+        double expectedWin = expectedScore(winnerRating, loserRating);
+        int k = Math.max(kFactor(winnerRating, winnerGames), kFactor(loserRating, loserGames));
+        int rawDelta = (int) Math.round(k * (1.0 - expectedWin));
+        return Math.max(1, Math.min(MAX_RATING_DELTA, rawDelta));
+    }
+
+    private double expectedScore(int playerRating, int opponentRating) {
+        return 1.0 / (1.0 + Math.pow(10.0, (opponentRating - playerRating) / 400.0));
+    }
+
+    private int kFactor(int rating, int gamesPlayed) {
+        if (gamesPlayed < PROVISIONAL_GAMES) {
+            return K_PROVISIONAL;
+        }
+        if (rating >= HIGH_RATING_THRESHOLD) {
+            return K_HIGH_RATED;
+        }
+        return K_ESTABLISHED;
     }
 
     private void resignLocked(Mesa mesa, SesionJugador session, boolean explicit) {
@@ -1374,6 +1416,38 @@ public class MultiplayerService {
 
     private void broadcastLobby() {
         messagingTemplate.convertAndSend("/topic/lobby", "UPDATE");
+    }
+
+    private void broadcastRankingUpdate() {
+        List<Map<String, Object>> ranking = rankingPayload();
+        messagingTemplate.convertAndSend("/topic/ranking/dia", ranking);
+        messagingTemplate.convertAndSend("/topic/ranking/semana", ranking);
+        messagingTemplate.convertAndSend("/topic/ranking/mes", ranking);
+        messagingTemplate.convertAndSend("/topic/ranking/historico", ranking);
+    }
+
+    private List<Map<String, Object>> rankingPayload() {
+        List<Usuario> users = usuarioRepository.findAll().stream()
+                .filter(usuario -> usuario.getGamesPlayed() > 0)
+                .sorted(Comparator.comparingInt(Usuario::getRating).reversed()
+                        .thenComparing(Usuario::getWins, Comparator.reverseOrder())
+                        .thenComparing(Usuario::getUsername))
+                .limit(10)
+                .toList();
+        List<Map<String, Object>> ranking = new ArrayList<>();
+        int rank = 1;
+        for (Usuario usuario : users) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("rank", rank++);
+            item.put("jugadorId", usuario.getId());
+            item.put("nombre", usuario.getUsername());
+            item.put("puntos", usuario.getRating());
+            item.put("gamesPlayed", usuario.getGamesPlayed());
+            item.put("wins", usuario.getWins());
+            item.put("losses", usuario.getLosses());
+            ranking.add(item);
+        }
+        return ranking;
     }
 
     private record Cell(int row, int col) {

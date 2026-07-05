@@ -10,6 +10,7 @@ import com.jair.battleship.battleshipbackend.models.entities.Disparo;
 import com.jair.battleship.battleshipbackend.models.entities.Mesa;
 import com.jair.battleship.battleshipbackend.models.entities.Partida;
 import com.jair.battleship.battleshipbackend.models.entities.Sala;
+import com.jair.battleship.battleshipbackend.models.entities.Usuario;
 import com.jair.battleship.battleshipbackend.models.enums.EstadoPartida;
 import com.jair.battleship.battleshipbackend.repositories.DisparoRepository;
 import com.jair.battleship.battleshipbackend.repositories.JugadorRepository;
@@ -194,6 +195,79 @@ class MultiplayerServiceClassicRulesTests {
     }
 
     @Test
+    void ratedRegisteredMatchAppliesBalancedEloOnce() {
+        GameFixture game = startedRegisteredGame(1200, 1200, 20, 20);
+        TableSnapshot table = service.table(game.mesaId(), game.alpha().token());
+        PlayerTurn turn = currentTurn(game, table.turnoActualJugadorId());
+        Long winnerUsuarioId = usuarioIdForTurn(game, turn);
+        Long loserUsuarioId = opponentUsuarioIdForTurn(game, turn);
+
+        for (String cell : CLASSIC_CELLS) {
+            service.shoot(game.mesaId(), turn.token(), new ShotRequest(cell));
+        }
+
+        Usuario winner = usuarioRepository.findById(winnerUsuarioId).orElseThrow();
+        Usuario loser = usuarioRepository.findById(loserUsuarioId).orElseThrow();
+        assertThat(winner.getRating()).isEqualTo(1212);
+        assertThat(loser.getRating()).isEqualTo(1188);
+        assertThat(winner.getGamesPlayed()).isEqualTo(21);
+        assertThat(loser.getGamesPlayed()).isEqualTo(21);
+        assertThat(winner.getWins()).isEqualTo(11);
+        assertThat(loser.getLosses()).isEqualTo(11);
+        assertThat(puntuacionRepository.findAll()).hasSize(2);
+
+        service.table(game.mesaId(), turn.token());
+        assertThat(puntuacionRepository.findAll()).hasSize(2);
+        assertThat(partidaRepository.findById(game.partidaId()).orElseThrow().isRatingProcessed()).isTrue();
+    }
+
+    @Test
+    void provisionalUpsetGetsMeaningfulButCappedRatingMove() {
+        GameFixture game = startedRegisteredGame(1000, 1400, 0, 30);
+        Partida partida = partidaRepository.findById(game.partidaId()).orElseThrow();
+        partida.setTurnoActualJugadorId(game.alphaJugadorId());
+        partidaRepository.save(partida);
+
+        for (String cell : CLASSIC_CELLS) {
+            service.shoot(game.mesaId(), game.alpha().token(), new ShotRequest(cell));
+        }
+
+        Usuario alpha = usuarioRepository.findById(game.alpha().usuarioId()).orElseThrow();
+        Usuario bravo = usuarioRepository.findById(game.bravo().usuarioId()).orElseThrow();
+        assertThat(alpha.getRating()).isEqualTo(1036);
+        assertThat(bravo.getRating()).isEqualTo(1364);
+    }
+
+    @Test
+    void registeredAbandonCountsAsRatedLoss() {
+        GameFixture game = startedRegisteredGame(1200, 1200, 20, 20);
+
+        service.resign(game.mesaId(), game.alpha().token());
+
+        Usuario alpha = usuarioRepository.findById(game.alpha().usuarioId()).orElseThrow();
+        Usuario bravo = usuarioRepository.findById(game.bravo().usuarioId()).orElseThrow();
+        assertThat(alpha.getRating()).isEqualTo(1188);
+        assertThat(alpha.getLosses()).isEqualTo(11);
+        assertThat(bravo.getRating()).isEqualTo(1212);
+        assertThat(bravo.getWins()).isEqualTo(11);
+        assertThat(puntuacionRepository.findAll()).hasSize(2);
+    }
+
+    @Test
+    void guestMatchesRemainUnrated() {
+        GameFixture game = startedGame();
+        TableSnapshot table = service.table(game.mesaId(), game.alpha().token());
+        PlayerTurn turn = currentTurn(game, table.turnoActualJugadorId());
+
+        for (String cell : CLASSIC_CELLS) {
+            service.shoot(game.mesaId(), turn.token(), new ShotRequest(cell));
+        }
+
+        assertThat(puntuacionRepository.findAll()).isEmpty();
+        assertThat(partidaRepository.findById(game.partidaId()).orElseThrow().isRatingProcessed()).isFalse();
+    }
+
+    @Test
     void readyTimeoutKicksTheUnreadySeatAndResetsReadyState() {
         SeatedFixture table = newSeatedTable();
         TableSnapshot waiting = service.ready(table.mesaId(), table.alpha().token());
@@ -251,6 +325,13 @@ class MultiplayerServiceClassicRulesTests {
         return game;
     }
 
+    private GameFixture startedRegisteredGame(int alphaRating, int bravoRating, int alphaGames, int bravoGames) {
+        GameFixture game = newRegisteredGame(alphaRating, bravoRating, alphaGames, bravoGames);
+        service.placeShips(game.mesaId(), game.alpha().token(), classicFleet());
+        service.placeShips(game.mesaId(), game.bravo().token(), classicFleet());
+        return game;
+    }
+
     private GameFixture newGame() {
         SeatedFixture seated = newSeatedTable();
         service.ready(seated.mesaId(), seated.alpha().token());
@@ -260,6 +341,25 @@ class MultiplayerServiceClassicRulesTests {
                 ready.partidaId(),
                 seated.alpha(),
                 seated.bravo(),
+                ready.seatA().jugadorId(),
+                ready.seatB().jugadorId());
+    }
+
+    private GameFixture newRegisteredGame(int alphaRating, int bravoRating, int alphaGames, int bravoGames) {
+        Sala sala = salaRepository.save(new Sala("Sala Rated", true));
+        SessionUser alpha = createRegisteredSession("alpha_rated", alphaRating, alphaGames);
+        SessionUser bravo = createRegisteredSession("bravo_rated", bravoRating, bravoGames);
+        TableSnapshot table = service.createTable(sala.getId(), alpha.token(), "Mesa Rated");
+        Long mesaId = table.id();
+        service.sit(mesaId, "A", alpha.token());
+        service.sit(mesaId, "B", bravo.token());
+        service.ready(mesaId, alpha.token());
+        TableSnapshot ready = service.ready(mesaId, bravo.token());
+        return new GameFixture(
+                mesaId,
+                ready.partidaId(),
+                alpha,
+                bravo,
                 ready.seatA().jugadorId(),
                 ready.seatB().jugadorId());
     }
@@ -275,11 +375,31 @@ class MultiplayerServiceClassicRulesTests {
         return new SeatedFixture(mesaId, alpha, bravo);
     }
 
+    private SessionUser createRegisteredSession(String username, int rating, int gamesPlayed) {
+        Usuario usuario = new Usuario();
+        usuario.setUsername(username);
+        usuario.setPasswordHash("test");
+        usuario.setRating(rating);
+        usuario.setGamesPlayed(gamesPlayed);
+        usuario.setWins(gamesPlayed / 2);
+        usuario.setLosses(gamesPlayed - usuario.getWins());
+        usuario = usuarioRepository.save(usuario);
+        return service.createSessionForUser(usuario);
+    }
+
     private PlayerTurn currentTurn(GameFixture game, Long jugadorId) {
         if (jugadorId.equals(game.alphaJugadorId())) {
             return new PlayerTurn(game.alpha().token(), game.alphaJugadorId(), game.bravoJugadorId());
         }
         return new PlayerTurn(game.bravo().token(), game.bravoJugadorId(), game.alphaJugadorId());
+    }
+
+    private Long usuarioIdForTurn(GameFixture game, PlayerTurn turn) {
+        return turn.token().equals(game.alpha().token()) ? game.alpha().usuarioId() : game.bravo().usuarioId();
+    }
+
+    private Long opponentUsuarioIdForTurn(GameFixture game, PlayerTurn turn) {
+        return turn.token().equals(game.alpha().token()) ? game.bravo().usuarioId() : game.alpha().usuarioId();
     }
 
     private ShipPlacementRequest classicFleet() {

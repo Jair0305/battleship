@@ -183,7 +183,9 @@ public class RankingServiceImpl implements RankingService {
         List<Map<String, Object>> ranking = new ArrayList<>();
         int rank = 1;
         var users = usuarioRepository.findAll().stream()
+                .filter(usuario -> usuario.getGamesPlayed() > 0)
                 .sorted(Comparator.comparingInt(Usuario::getRating).reversed()
+                        .thenComparing(Usuario::getWins, Comparator.reverseOrder())
                         .thenComparing(Usuario::getUsername))
                 .limit(10)
                 .toList();
@@ -193,6 +195,9 @@ public class RankingServiceImpl implements RankingService {
             item.put("jugadorId", usuario.getId());
             item.put("nombre", usuario.getUsername());
             item.put("puntos", usuario.getRating());
+            item.put("gamesPlayed", usuario.getGamesPlayed());
+            item.put("wins", usuario.getWins());
+            item.put("losses", usuario.getLosses());
             ranking.add(item);
         }
         return ranking;
