@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
+import { getStoredSession } from "../lib/api";
 import type { SessionUser } from "../lib/types";
-
-const SESSION_KEY = "bship:session";
 
 function subscribeSession(listener: () => void) {
   window.addEventListener("bship:session", listener);
@@ -16,7 +15,8 @@ function subscribeSession(listener: () => void) {
 
 function sessionSnapshot() {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(SESSION_KEY);
+  const session = getStoredSession();
+  return session ? JSON.stringify(session) : null;
 }
 
 function serverSessionSnapshot() {
@@ -29,7 +29,8 @@ export function useSessionUser() {
   return useMemo<SessionUser | null>(() => {
     if (!raw) return null;
     try {
-      return JSON.parse(raw) as SessionUser;
+      const parsed = JSON.parse(raw) as SessionUser;
+      return parsed.guest || parsed.token ? parsed : null;
     } catch {
       return null;
     }

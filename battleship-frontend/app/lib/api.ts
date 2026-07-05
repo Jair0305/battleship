@@ -42,6 +42,7 @@ export function realtimeUrl(path = '/ws') {
   return url.toString()
 }
 const SESSION_KEY = 'bship:session'
+let guestSession: SessionUser | null = null
 
 type ApiError = {
   message?: string
@@ -75,19 +76,33 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string |
 export function getStoredSession(): SessionUser | null {
   if (typeof window === 'undefined') return null
   const raw = window.localStorage.getItem(SESSION_KEY)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as SessionUser
-  } catch {
-    window.localStorage.removeItem(SESSION_KEY)
-    return null
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as SessionUser
+      if (parsed.guest) {
+        window.localStorage.removeItem(SESSION_KEY)
+      } else {
+        return parsed
+      }
+    } catch {
+      window.localStorage.removeItem(SESSION_KEY)
+    }
   }
+  return guestSession
 }
 
 export function saveSession(session: SessionUser | null) {
   if (typeof window === 'undefined') return
-  if (session) window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-  else window.localStorage.removeItem(SESSION_KEY)
+  if (session?.guest) {
+    window.localStorage.removeItem(SESSION_KEY)
+    guestSession = session
+  } else if (session) {
+    guestSession = null
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  } else {
+    guestSession = null
+    window.localStorage.removeItem(SESSION_KEY)
+  }
   window.dispatchEvent(new Event('bship:session'))
 }
 
