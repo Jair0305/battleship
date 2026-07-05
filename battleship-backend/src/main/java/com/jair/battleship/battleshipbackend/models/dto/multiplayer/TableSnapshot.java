@@ -10,6 +10,7 @@ public record TableSnapshot(
         String nombre,
         String estado,
         Instant serverNow,
+        Instant readyDeadlineAt,
         Instant placementDeadlineAt,
         Instant turnDeadlineAt,
         String ruleset,

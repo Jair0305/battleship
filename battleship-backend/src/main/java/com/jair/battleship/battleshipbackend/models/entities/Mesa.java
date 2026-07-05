@@ -45,6 +45,7 @@ public class Mesa {
     private boolean readyB = false;
     private boolean rematchA = false;
     private boolean rematchB = false;
+    private Instant readyDeadlineAt;
 
     @JsonIgnore
     @ElementCollection

@@ -1,38 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { createGuest, getStoredSession, logout } from "../lib/api";
-import type { SessionUser } from "../lib/types";
+import { logout } from "../lib/api";
+import { useSessionUser } from "../hooks/useSessionUser";
+
+function signOut() {
+  logout();
+}
 
 export default function Header() {
-  const [session, setSession] = useState<SessionUser | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    const load = () => setSession(getStoredSession());
-    load();
-    window.addEventListener("bship:session", load);
-    window.addEventListener("storage", load);
-    return () => {
-      window.removeEventListener("bship:session", load);
-      window.removeEventListener("storage", load);
-    };
-  }, []);
-
-  const enterAsGuest = async () => {
-    setBusy(true);
-    try {
-      setSession(await createGuest());
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const signOut = () => {
-    logout();
-    setSession(null);
-  };
+  const session = useSessionUser();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/90 backdrop-blur">
@@ -59,6 +36,7 @@ export default function Header() {
                 </span>
               )}
               <button
+                type="button"
                 onClick={signOut}
                 className="rounded border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800"
               >
@@ -67,14 +45,7 @@ export default function Header() {
             </>
           ) : (
             <>
-              <button
-                onClick={enterAsGuest}
-                disabled={busy}
-                className="rounded bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-60"
-              >
-                {busy ? "Entrando..." : "Invitado"}
-              </button>
-              <Link href="/login" className="text-sm text-slate-300 transition hover:text-white">
+              <Link href="/" className="text-sm text-slate-300 transition hover:text-white">
                 Iniciar sesion
               </Link>
               <Link

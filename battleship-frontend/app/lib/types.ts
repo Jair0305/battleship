@@ -59,6 +59,7 @@ export type TableSnapshot = {
   nombre: string
   estado: GameState
   serverNow: string
+  readyDeadlineAt: string | null
   placementDeadlineAt: string | null
   turnDeadlineAt: string | null
   ruleset: string

@@ -26,6 +26,7 @@ public class MultiplayerService {
     public static final int BOARD_SIZE = 10;
     private static final int ELO_K = 32;
     private static final String RULESET = "SEA_BATTLE_2_CLASSIC";
+    private static final Duration READY_LIMIT = Duration.ofSeconds(15);
     private static final Duration PLACEMENT_LIMIT = Duration.ofSeconds(60);
     private static final Duration TURN_LIMIT = Duration.ofSeconds(30);
     private static final List<FleetShipSpec> FLEET = List.of(
@@ -91,6 +92,7 @@ public class MultiplayerService {
                 mesa.setReadyB(false);
                 mesa.setRematchA(false);
                 mesa.setRematchB(false);
+                mesa.setReadyDeadlineAt(null);
                 mesa.setEstado(EstadoPartida.WAITING_FOR_PLAYERS);
                 mesaRepository.save(mesa);
                 broadcastRoomAndTable(mesa);
@@ -101,6 +103,7 @@ public class MultiplayerService {
     @Scheduled(fixedDelay = 1000)
     @Transactional
     public void processDueAutoActions() {
+        resolveReadyTimeoutsForAllTables();
         resolveDueTimeoutsForAllActive();
     }
 
@@ -141,6 +144,7 @@ public class MultiplayerService {
         if (token != null && !token.isBlank()) {
             requireSession(token);
         }
+        resolveReadyTimeoutsForAllTables();
         resolveDueTimeoutsForAllActive();
         ensureDefaultTables();
         List<RoomSnapshot> rooms = salaRepository.findAll().stream()
@@ -160,6 +164,7 @@ public class MultiplayerService {
         if (token != null && !token.isBlank()) {
             requireSession(token);
         }
+        resolveReadyTimeoutsForAllTables();
         resolveDueTimeoutsForAllActive();
         Sala sala = salaRepository.findById(salaId).orElseThrow(() -> notFound("Sala no encontrada"));
         ensureTableForRoom(sala);
@@ -186,6 +191,7 @@ public class MultiplayerService {
             requireSession(token);
         }
         Mesa mesa = lockMesa(mesaId);
+        resolveReadyTimeout(mesa);
         resolveDueTimeouts(mesa);
         syncMesaState(mesa);
         mesa = mesaRepository.save(mesa);
@@ -196,6 +202,7 @@ public class MultiplayerService {
     public TableSnapshot joinTable(Long mesaId, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveReadyTimeout(mesa);
         resolveDueTimeouts(mesa);
         mesa.getSpectatorSessionIds().add(session.getId());
         syncMesaState(mesa);
@@ -208,12 +215,14 @@ public class MultiplayerService {
     public TableSnapshot leaveTable(Long mesaId, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveReadyTimeout(mesa);
+        resolveDueTimeouts(mesa);
         if (isSeat(mesa.getSeatA(), session)) {
             if (requiresForfeit(mesa)) {
                 resignLocked(mesa, session, false);
             } else {
                 mesa.setSeatA(null);
-                mesa.setReadyA(false);
+                clearReadyState(mesa);
             }
         }
         if (isSeat(mesa.getSeatB(), session)) {
@@ -221,7 +230,7 @@ public class MultiplayerService {
                 resignLocked(mesa, session, false);
             } else {
                 mesa.setSeatB(null);
-                mesa.setReadyB(false);
+                clearReadyState(mesa);
             }
         }
         mesa.getSpectatorSessionIds().remove(session.getId());
@@ -235,6 +244,7 @@ public class MultiplayerService {
     public TableSnapshot sit(Long mesaId, String seat, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveReadyTimeout(mesa);
         resolveDueTimeouts(mesa);
         if (currentPartida(mesa).filter(p -> p.getEstado() == EstadoPartida.IN_PROGRESS
                 || p.getEstado() == EstadoPartida.PLACING_SHIPS
@@ -251,14 +261,13 @@ public class MultiplayerService {
                 throw conflict("El asiento A esta ocupado");
             }
             mesa.setSeatA(jugador);
-            mesa.setReadyA(false);
         } else {
             if (mesa.getSeatB() != null) {
                 throw conflict("El asiento B esta ocupado");
             }
             mesa.setSeatB(jugador);
-            mesa.setReadyB(false);
         }
+        clearReadyState(mesa);
         mesa.getSpectatorSessionIds().add(session.getId());
         syncMesaState(mesa);
         mesa = mesaRepository.save(mesa);
@@ -270,15 +279,16 @@ public class MultiplayerService {
     public TableSnapshot stand(Long mesaId, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveReadyTimeout(mesa);
         resolveDueTimeouts(mesa);
         if (requiresForfeit(mesa)) {
             resignLocked(mesa, session, true);
         } else if (isSeat(mesa.getSeatA(), session)) {
             mesa.setSeatA(null);
-            mesa.setReadyA(false);
+            clearReadyState(mesa);
         } else if (isSeat(mesa.getSeatB(), session)) {
             mesa.setSeatB(null);
-            mesa.setReadyB(false);
+            clearReadyState(mesa);
         } else {
             throw forbidden("Solo un jugador sentado puede liberar su asiento");
         }
@@ -292,6 +302,7 @@ public class MultiplayerService {
     public TableSnapshot ready(Long mesaId, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveReadyTimeout(mesa);
         resolveDueTimeouts(mesa);
         if (mesa.getSeatA() == null || mesa.getSeatB() == null) {
             throw conflict("Se necesitan dos jugadores sentados");
@@ -310,8 +321,12 @@ public class MultiplayerService {
         }
         if (mesa.isReadyA() && mesa.isReadyB()) {
             Partida partida = createMatchForMesa(mesa);
+            mesa.setReadyDeadlineAt(null);
             mesa.setEstado(partida.getEstado());
         } else {
+            if (mesa.getReadyDeadlineAt() == null) {
+                mesa.setReadyDeadlineAt(Instant.now().plus(READY_LIMIT));
+            }
             mesa.setEstado(EstadoPartida.PLAYERS_SEATED);
         }
         mesa = mesaRepository.save(mesa);
@@ -446,6 +461,45 @@ public class MultiplayerService {
         }
     }
 
+    private void resolveReadyTimeoutsForAllTables() {
+        Instant now = Instant.now();
+        List<Mesa> dueTables = mesaRepository.findByReadyDeadlineAtBefore(now);
+        for (Mesa dueTable : dueTables) {
+            mesaRepository.findByIdForUpdate(dueTable.getId()).ifPresent(this::resolveReadyTimeout);
+        }
+    }
+
+    private boolean resolveReadyTimeout(Mesa mesa) {
+        if (mesa.getReadyDeadlineAt() == null) {
+            return false;
+        }
+        if (currentPartida(mesa).filter(p -> ACTIVE_STATES.contains(p.getEstado())).isPresent()) {
+            mesa.setReadyDeadlineAt(null);
+            mesaRepository.save(mesa);
+            return true;
+        }
+        boolean bothSeated = mesa.getSeatA() != null && mesa.getSeatB() != null;
+        boolean exactlyOneReady = mesa.isReadyA() ^ mesa.isReadyB();
+        if (!bothSeated || !exactlyOneReady) {
+            mesa.setReadyDeadlineAt(null);
+            mesaRepository.save(mesa);
+            return true;
+        }
+        if (Instant.now().isBefore(mesa.getReadyDeadlineAt())) {
+            return false;
+        }
+        if (mesa.isReadyA()) {
+            mesa.setSeatB(null);
+        } else {
+            mesa.setSeatA(null);
+        }
+        clearReadyState(mesa);
+        syncMesaState(mesa);
+        mesaRepository.save(mesa);
+        broadcastRoomAndTable(mesa);
+        return true;
+    }
+
     private boolean resolveDueTimeouts(Mesa mesa) {
         Partida partida = currentPartida(mesa).orElse(null);
         if (partida == null || !ACTIVE_STATES.contains(partida.getEstado())) {
@@ -459,6 +513,7 @@ public class MultiplayerService {
             mesa.setSeatB(null);
             mesa.setReadyA(false);
             mesa.setReadyB(false);
+            mesa.setReadyDeadlineAt(null);
             mesa.setEstado(EstadoPartida.WAITING_FOR_PLAYERS);
             mesaRepository.save(mesa);
             broadcastRoomAndTable(mesa);
@@ -527,6 +582,7 @@ public class MultiplayerService {
             partida.setTurnoActualJugadorId(new Random().nextBoolean() ? mesa.getSeatA().getId() : mesa.getSeatB().getId());
         }
         partida.setTurnDeadlineAt(Instant.now().plus(TURN_LIMIT));
+        mesa.setReadyDeadlineAt(null);
         mesa.setEstado(EstadoPartida.IN_PROGRESS);
     }
 
@@ -681,6 +737,7 @@ public class MultiplayerService {
             mesa.setReadyA(true);
             mesa.setReadyB(true);
             Partida partida = createMatchForMesa(mesa);
+            mesa.setReadyDeadlineAt(null);
             mesa.setEstado(partida.getEstado());
         }
         mesa = mesaRepository.save(mesa);
@@ -763,6 +820,7 @@ public class MultiplayerService {
                 mesa.getNombre(),
                 mesa.getEstado().name(),
                 Instant.now(),
+                mesa.getReadyDeadlineAt(),
                 partida.map(Partida::getPlacementDeadlineAt).orElse(null),
                 partida.map(Partida::getTurnDeadlineAt).orElse(null),
                 partida.map(Partida::getRuleset).orElse(RULESET),
@@ -975,6 +1033,7 @@ public class MultiplayerService {
         if (mesa.getSeatA() == null || mesa.getSeatB() == null) {
             throw conflict("Se necesitan dos jugadores");
         }
+        mesa.setReadyDeadlineAt(null);
         Instant now = Instant.now();
         Partida partida = new Partida();
         partida.setMesa(mesa);
@@ -1156,12 +1215,20 @@ public class MultiplayerService {
         }
         int seats = (mesa.getSeatA() == null ? 0 : 1) + (mesa.getSeatB() == null ? 0 : 1);
         if (seats < 2) {
+            clearReadyState(mesa);
             mesa.setEstado(EstadoPartida.WAITING_FOR_PLAYERS);
         } else if (mesa.isReadyA() && mesa.isReadyB()) {
+            mesa.setReadyDeadlineAt(null);
             mesa.setEstado(EstadoPartida.READY_TO_START);
         } else {
             mesa.setEstado(EstadoPartida.PLAYERS_SEATED);
         }
+    }
+
+    private void clearReadyState(Mesa mesa) {
+        mesa.setReadyA(false);
+        mesa.setReadyB(false);
+        mesa.setReadyDeadlineAt(null);
     }
 
     private boolean requiresForfeit(Mesa mesa) {

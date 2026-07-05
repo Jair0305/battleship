@@ -65,6 +65,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string |
     } catch {
       payload = {}
     }
+    if (res.status === 401) saveSession(null)
     throw new Error(payload.message || `Solicitud fallida (${res.status})`)
   }
   if (res.status === 204) return undefined as T
@@ -93,12 +94,7 @@ export function saveSession(session: SessionUser | null) {
 export async function ensureSession(): Promise<SessionUser> {
   const stored = getStoredSession()
   if (stored?.token) return stored
-  const created = await request<SessionUser>('/api/session/guest', {
-    method: 'POST',
-    body: JSON.stringify({}),
-  }, null)
-  saveSession(created)
-  return created
+  throw new Error('Inicia sesion para jugar')
 }
 
 export async function createGuest(displayName?: string): Promise<SessionUser> {

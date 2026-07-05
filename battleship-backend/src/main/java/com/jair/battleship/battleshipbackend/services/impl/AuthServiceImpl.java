@@ -18,8 +18,8 @@ public class AuthServiceImpl implements AuthService {
         if (username == null || username.isBlank()) {
             throw new IllegalArgumentException("username requerido");
         }
-        if (password == null || password.length() < 4) {
-            throw new IllegalArgumentException("password demasiado corta");
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("password requerido");
         }
         if (!password.equals(passwordConfirm)) {
             throw new IllegalArgumentException("las contraseñas no coinciden");

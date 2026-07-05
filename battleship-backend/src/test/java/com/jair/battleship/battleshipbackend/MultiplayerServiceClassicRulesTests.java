@@ -194,6 +194,39 @@ class MultiplayerServiceClassicRulesTests {
     }
 
     @Test
+    void readyTimeoutKicksTheUnreadySeatAndResetsReadyState() {
+        SeatedFixture table = newSeatedTable();
+        TableSnapshot waiting = service.ready(table.mesaId(), table.alpha().token());
+        assertThat(waiting.readyDeadlineAt()).isNotNull();
+
+        Mesa mesa = mesaRepository.findById(table.mesaId()).orElseThrow();
+        mesa.setReadyDeadlineAt(Instant.now().minusSeconds(1));
+        mesaRepository.save(mesa);
+
+        service.processDueAutoActions();
+
+        TableSnapshot afterTimeout = service.table(table.mesaId(), table.alpha().token());
+        assertThat(afterTimeout.estado()).isEqualTo("WAITING_FOR_PLAYERS");
+        assertThat(afterTimeout.seatA().occupied()).isTrue();
+        assertThat(afterTimeout.seatA().ready()).isFalse();
+        assertThat(afterTimeout.seatB().occupied()).isFalse();
+        assertThat(afterTimeout.readyDeadlineAt()).isNull();
+    }
+
+    @Test
+    void secondReadyBeforeDeadlineStartsPlacementAndClearsReadyDeadline() {
+        SeatedFixture table = newSeatedTable();
+        TableSnapshot waiting = service.ready(table.mesaId(), table.alpha().token());
+        assertThat(waiting.readyDeadlineAt()).isNotNull();
+
+        TableSnapshot started = service.ready(table.mesaId(), table.bravo().token());
+
+        assertThat(started.estado()).isEqualTo("PLACING_SHIPS");
+        assertThat(started.readyDeadlineAt()).isNull();
+        assertThat(started.partidaId()).isNotNull();
+    }
+
+    @Test
     void lobbyToleratesPartialActiveTablesFromOlderData() {
         Sala sala = salaRepository.save(new Sala("Sala Legacy", true));
         Mesa mesa = new Mesa();
@@ -219,6 +252,19 @@ class MultiplayerServiceClassicRulesTests {
     }
 
     private GameFixture newGame() {
+        SeatedFixture seated = newSeatedTable();
+        service.ready(seated.mesaId(), seated.alpha().token());
+        TableSnapshot ready = service.ready(seated.mesaId(), seated.bravo().token());
+        return new GameFixture(
+                seated.mesaId(),
+                ready.partidaId(),
+                seated.alpha(),
+                seated.bravo(),
+                ready.seatA().jugadorId(),
+                ready.seatB().jugadorId());
+    }
+
+    private SeatedFixture newSeatedTable() {
         Sala sala = salaRepository.save(new Sala("Sala Test", true));
         SessionUser alpha = service.createGuest("Alpha");
         SessionUser bravo = service.createGuest("Bravo");
@@ -226,15 +272,7 @@ class MultiplayerServiceClassicRulesTests {
         Long mesaId = table.id();
         service.sit(mesaId, "A", alpha.token());
         service.sit(mesaId, "B", bravo.token());
-        service.ready(mesaId, alpha.token());
-        TableSnapshot ready = service.ready(mesaId, bravo.token());
-        return new GameFixture(
-                mesaId,
-                ready.partidaId(),
-                alpha,
-                bravo,
-                ready.seatA().jugadorId(),
-                ready.seatB().jugadorId());
+        return new SeatedFixture(mesaId, alpha, bravo);
     }
 
     private PlayerTurn currentTurn(GameFixture game, Long jugadorId) {
@@ -275,6 +313,9 @@ class MultiplayerServiceClassicRulesTests {
             SessionUser bravo,
             Long alphaJugadorId,
             Long bravoJugadorId) {
+    }
+
+    private record SeatedFixture(Long mesaId, SessionUser alpha, SessionUser bravo) {
     }
 
     private record PlayerTurn(String token, Long jugadorId, Long opponentJugadorId) {

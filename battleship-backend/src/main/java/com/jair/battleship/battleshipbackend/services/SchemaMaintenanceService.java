@@ -36,7 +36,8 @@ public class SchemaMaintenanceService {
                 "ALTER TABLE partida ADD COLUMN IF NOT EXISTS last_auto_action_at timestamp(6) with time zone",
                 "ALTER TABLE partida ADD COLUMN IF NOT EXISTS ruleset varchar(255) DEFAULT 'SEA_BATTLE_2_CLASSIC'",
                 "UPDATE partida SET ruleset = 'SEA_BATTLE_2_CLASSIC' WHERE ruleset IS NULL",
-                "ALTER TABLE partida ALTER COLUMN ruleset SET DEFAULT 'SEA_BATTLE_2_CLASSIC'")) {
+                "ALTER TABLE partida ALTER COLUMN ruleset SET DEFAULT 'SEA_BATTLE_2_CLASSIC'",
+                "ALTER TABLE mesa ADD COLUMN IF NOT EXISTS ready_deadline_at timestamp(6) with time zone")) {
             jdbcTemplate.execute(statement);
         }
     }

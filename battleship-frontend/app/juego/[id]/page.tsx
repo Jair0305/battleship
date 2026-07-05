@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { api, ensureSession } from "../../lib/api";
+import EntryScreen from "../../components/EntryScreen";
+import { api } from "../../lib/api";
 import {
   BOARD_SIZE,
   FLEET,
@@ -13,6 +14,7 @@ import {
   type ShipKey,
   type TableSnapshot,
 } from "../../lib/types";
+import { useSessionUser } from "../../hooks/useSessionUser";
 import { useRealtime } from "../../hooks/useRealtime";
 
 const rows = Array.from({ length: BOARD_SIZE }, (_, index) => String.fromCharCode(65 + index));
@@ -80,6 +82,16 @@ export default function TablePage() {
 }
 
 function TableExperience({ mesaId }: { mesaId: number }) {
+  const session = useSessionUser();
+
+  if (!session) {
+    return <EntryScreen />;
+  }
+
+  return <AuthedTableExperience mesaId={mesaId} />;
+}
+
+function AuthedTableExperience({ mesaId }: { mesaId: number }) {
   const router = useRouter();
   const [table, setTable] = useState<TableSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,7 +129,6 @@ function TableExperience({ mesaId }: { mesaId: number }) {
   const loadTable = useCallback(
     async (join: boolean) => {
       setError(null);
-      await ensureSession();
       const snapshot = join ? await api.joinTable(mesaId) : await api.table(mesaId);
       applyTable(snapshot);
       setLoading(false);
@@ -130,11 +141,7 @@ function TableExperience({ mesaId }: { mesaId: number }) {
     let alive = true;
     const boot = () => {
       setError(null);
-      ensureSession()
-        .then(() => {
-          if (!alive) return null;
-          return api.joinTable(mesaId);
-        })
+      api.joinTable(mesaId)
         .then((snapshot) => {
           if (!alive || !snapshot) return;
           applyTable(snapshot);
@@ -183,6 +190,7 @@ function TableExperience({ mesaId }: { mesaId: number }) {
   const placedKeys = new Set(fleet.map((ship) => ship.key));
   const unplacedCount = fleetSpec.length - placedKeys.size;
   const estimatedServerNow = table?.serverNow ? Date.parse(table.serverNow) + (clientNow - lastSnapshotAt) : clientNow;
+  const readyRemaining = secondsRemaining(table?.readyDeadlineAt ?? null, estimatedServerNow);
   const placementRemaining = secondsRemaining(table?.placementDeadlineAt ?? null, estimatedServerNow);
   const turnRemaining = secondsRemaining(table?.turnDeadlineAt ?? null, estimatedServerNow);
   const placementPreview = selectedShip && hoverCell
@@ -355,6 +363,11 @@ function TableExperience({ mesaId }: { mesaId: number }) {
                   <div className="rounded bg-cyan-500/10 px-3 py-2 text-sm text-cyan-100">
                     Estas sentado en el asiento {mySeat}.
                   </div>
+                  {table.readyDeadlineAt && !isActiveRound && (
+                    <div className={readyRemaining <= 5 ? "rounded bg-red-500/10 px-3 py-2 text-sm text-red-200" : "rounded bg-amber-500/10 px-3 py-2 text-sm text-amber-100"}>
+                      Esperando OK rival: {formatSeconds(readyRemaining)}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={handleStand}
@@ -442,7 +455,7 @@ function TableExperience({ mesaId }: { mesaId: number }) {
         </aside>
 
         <main className="space-y-4">
-          <StatusStrip table={table} mySeat={mySeat} opponentName={opponentSeat?.displayName ?? null} turnRemaining={turnRemaining} />
+          <StatusStrip table={table} mySeat={mySeat} opponentName={opponentSeat?.displayName ?? null} readyRemaining={readyRemaining} turnRemaining={turnRemaining} />
 
           {canPlaceShips && (
             <Panel title="Colocar flota">
@@ -612,11 +625,13 @@ function StatusStrip({
   table,
   mySeat,
   opponentName,
+  readyRemaining,
   turnRemaining,
 }: {
   table: TableSnapshot;
   mySeat: Seat | null;
   opponentName: string | null;
+  readyRemaining: number;
   turnRemaining: number;
 }) {
   const view = table.privateView;
@@ -634,8 +649,8 @@ function StatusStrip({
       />
       <InfoTile
         label="Tiempo"
-        value={table.estado === "IN_PROGRESS" ? formatSeconds(turnRemaining) : table.placementDeadlineAt ? "Colocando" : "Sin reloj"}
-        accent={table.estado === "IN_PROGRESS" && turnRemaining <= 10}
+        value={table.estado === "IN_PROGRESS" ? formatSeconds(turnRemaining) : table.readyDeadlineAt ? formatSeconds(readyRemaining) : table.placementDeadlineAt ? "Colocando" : "Sin reloj"}
+        accent={(table.estado === "IN_PROGRESS" && turnRemaining <= 10) || Boolean(table.readyDeadlineAt && readyRemaining <= 5)}
       />
     </div>
   );

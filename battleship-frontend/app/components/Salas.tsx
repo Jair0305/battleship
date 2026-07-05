@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Leaderboard from "./Leaderboard";
-import { api, ensureSession } from "../lib/api";
+import { api } from "../lib/api";
 import type { LobbySnapshot, RoomSnapshot, TableSnapshot } from "../lib/types";
 import { useRealtime } from "../hooks/useRealtime";
 
@@ -28,7 +28,6 @@ export default function Salas() {
   const refresh = useCallback(async () => {
     try {
       setError(null);
-      await ensureSession();
       setLobby(await api.lobby());
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo cargar el lobby");
@@ -85,6 +84,7 @@ export default function Salas() {
               {connected ? "Tiempo real" : "Reconectando"}
             </span>
             <button
+              type="button"
               onClick={refresh}
               className="rounded border border-slate-700 px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-800"
             >
@@ -155,6 +155,7 @@ function RoomPanel({
           </div>
         </div>
         <button
+          type="button"
           onClick={onCreate}
           disabled={creating}
           className="rounded bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-60"
@@ -205,6 +206,7 @@ function TableCard({ table, onJoin }: { table: TableSnapshot; onJoin: () => void
       </div>
 
       <button
+        type="button"
         onClick={onJoin}
         disabled={!isJoinable}
         className="mt-4 w-full rounded border border-cyan-500/40 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-50"
