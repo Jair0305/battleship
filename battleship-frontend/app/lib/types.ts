@@ -27,6 +27,8 @@ export type ShotSnapshot = {
   acierto: boolean
   resultado: string
   barcoHundido: string | null
+  automatic: boolean
+  reason: 'MANUAL' | 'SHOT_TIMEOUT' | string
   ts: string
 }
 
@@ -56,6 +58,11 @@ export type TableSnapshot = {
   salaNombre: string
   nombre: string
   estado: GameState
+  serverNow: string
+  placementDeadlineAt: string | null
+  turnDeadlineAt: string | null
+  ruleset: string
+  fleetSpec: Array<{ key: ShipKey; name: string; size: number }>
   seatA: SeatSnapshot
   seatB: SeatSnapshot
   mySeat: 'A' | 'B' | null
@@ -100,6 +107,8 @@ export type ShotResult = {
   result: 'MISS' | 'HIT' | 'SUNK' | 'WIN'
   hit: boolean
   sunkShip: string | null
+  automatic: boolean
+  reason: 'MANUAL' | 'SHOT_TIMEOUT' | string
   winnerId: number | null
   nextTurnJugadorId: number | null
 }
@@ -126,15 +135,30 @@ export type GameState =
   | 'CANCELADA'
 
 export type Orientation = 'H' | 'V'
-export type ShipKey = 'carrier' | 'battleship' | 'cruiser' | 'submarine' | 'destroyer'
+export type ShipKey =
+  | 'battleship_1'
+  | 'cruiser_1'
+  | 'cruiser_2'
+  | 'destroyer_1'
+  | 'destroyer_2'
+  | 'destroyer_3'
+  | 'boat_1'
+  | 'boat_2'
+  | 'boat_3'
+  | 'boat_4'
 export type CellShot = 'MISS' | 'HIT' | 'SUNK'
 
 export const BOARD_SIZE = 10
 
 export const FLEET: Array<{ key: ShipKey; name: string; size: number }> = [
-  { key: 'carrier', name: 'Portaaviones', size: 5 },
-  { key: 'battleship', name: 'Acorazado', size: 4 },
-  { key: 'cruiser', name: 'Crucero', size: 3 },
-  { key: 'submarine', name: 'Submarino', size: 3 },
-  { key: 'destroyer', name: 'Destructor', size: 2 },
+  { key: 'battleship_1', name: 'Acorazado', size: 4 },
+  { key: 'cruiser_1', name: 'Crucero 1', size: 3 },
+  { key: 'cruiser_2', name: 'Crucero 2', size: 3 },
+  { key: 'destroyer_1', name: 'Destructor 1', size: 2 },
+  { key: 'destroyer_2', name: 'Destructor 2', size: 2 },
+  { key: 'destroyer_3', name: 'Destructor 3', size: 2 },
+  { key: 'boat_1', name: 'Lancha 1', size: 1 },
+  { key: 'boat_2', name: 'Lancha 2', size: 1 },
+  { key: 'boat_3', name: 'Lancha 3', size: 1 },
+  { key: 'boat_4', name: 'Lancha 4', size: 1 },
 ]

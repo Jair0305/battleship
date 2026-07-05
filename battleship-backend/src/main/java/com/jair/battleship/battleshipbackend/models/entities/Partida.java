@@ -28,6 +28,10 @@ public class Partida {
 
     private Instant inicio;
     private Instant fin;
+    private Instant placementDeadlineAt;
+    private Instant turnDeadlineAt;
+    private Instant lastAutoActionAt;
+    private String ruleset = "SEA_BATTLE_2_CLASSIC";
 
     // turnoActual: id del jugador que debe jugar
     private Long turnoActualJugadorId;

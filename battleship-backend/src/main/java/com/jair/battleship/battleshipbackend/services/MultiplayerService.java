@@ -7,14 +7,17 @@ import com.jair.battleship.battleshipbackend.models.enums.ResultadoParticipacion
 import com.jair.battleship.battleshipbackend.repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.Duration;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,12 +25,27 @@ public class MultiplayerService {
 
     public static final int BOARD_SIZE = 10;
     private static final int ELO_K = 32;
-    private static final Map<String, Integer> FLEET = Map.of(
-            "carrier", 5,
-            "battleship", 4,
-            "cruiser", 3,
-            "submarine", 3,
-            "destroyer", 2);
+    private static final String RULESET = "SEA_BATTLE_2_CLASSIC";
+    private static final Duration PLACEMENT_LIMIT = Duration.ofSeconds(60);
+    private static final Duration TURN_LIMIT = Duration.ofSeconds(30);
+    private static final List<FleetShipSpec> FLEET = List.of(
+            new FleetShipSpec("battleship_1", "Acorazado", 4),
+            new FleetShipSpec("cruiser_1", "Crucero 1", 3),
+            new FleetShipSpec("cruiser_2", "Crucero 2", 3),
+            new FleetShipSpec("destroyer_1", "Destructor 1", 2),
+            new FleetShipSpec("destroyer_2", "Destructor 2", 2),
+            new FleetShipSpec("destroyer_3", "Destructor 3", 2),
+            new FleetShipSpec("boat_1", "Lancha 1", 1),
+            new FleetShipSpec("boat_2", "Lancha 2", 1),
+            new FleetShipSpec("boat_3", "Lancha 3", 1),
+            new FleetShipSpec("boat_4", "Lancha 4", 1));
+    private static final Map<String, FleetShipSpec> FLEET_BY_KEY = FLEET.stream()
+            .collect(Collectors.toMap(FleetShipSpec::key, spec -> spec, (a, b) -> a, LinkedHashMap::new));
+    private static final int FLEET_CELLS = FLEET.stream().mapToInt(FleetShipSpec::size).sum();
+    private static final List<EstadoPartida> ACTIVE_STATES = List.of(
+            EstadoPartida.PLACING_SHIPS,
+            EstadoPartida.READY_TO_START,
+            EstadoPartida.IN_PROGRESS);
 
     @Autowired
     private SesionJugadorRepository sesionRepository;
@@ -51,6 +69,40 @@ public class MultiplayerService {
     private PuntuacionRepository puntuacionRepository;
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
+    public void cancelLegacyActiveMatches() {
+        Instant now = Instant.now();
+        for (Partida partida : partidaRepository.findByEstadoIn(ACTIVE_STATES)) {
+            if (RULESET.equals(partida.getRuleset())) {
+                continue;
+            }
+            partida.setEstado(EstadoPartida.CANCELLED);
+            partida.setFin(now);
+            partida.setTurnDeadlineAt(null);
+            partida.setPlacementDeadlineAt(null);
+            partidaRepository.save(partida);
+            Mesa mesa = partida.getMesa();
+            if (mesa != null) {
+                mesa.setSeatA(null);
+                mesa.setSeatB(null);
+                mesa.setReadyA(false);
+                mesa.setReadyB(false);
+                mesa.setRematchA(false);
+                mesa.setRematchB(false);
+                mesa.setEstado(EstadoPartida.WAITING_FOR_PLAYERS);
+                mesaRepository.save(mesa);
+                broadcastRoomAndTable(mesa);
+            }
+        }
+    }
+
+    @Scheduled(fixedDelay = 1000)
+    @Transactional
+    public void processDueAutoActions() {
+        resolveDueTimeoutsForAllActive();
+    }
 
     @Transactional
     public SessionUser createGuest(String requestedName) {
@@ -89,6 +141,7 @@ public class MultiplayerService {
         if (token != null && !token.isBlank()) {
             requireSession(token);
         }
+        resolveDueTimeoutsForAllActive();
         ensureDefaultTables();
         List<RoomSnapshot> rooms = salaRepository.findAll().stream()
                 .sorted(Comparator.comparing(Sala::getId))
@@ -107,6 +160,7 @@ public class MultiplayerService {
         if (token != null && !token.isBlank()) {
             requireSession(token);
         }
+        resolveDueTimeoutsForAllActive();
         Sala sala = salaRepository.findById(salaId).orElseThrow(() -> notFound("Sala no encontrada"));
         ensureTableForRoom(sala);
         return roomSnapshot(sala, token);
@@ -131,8 +185,10 @@ public class MultiplayerService {
         if (token != null && !token.isBlank()) {
             requireSession(token);
         }
-        Mesa mesa = mesaRepository.findById(mesaId).orElseThrow(() -> notFound("Mesa no encontrada"));
+        Mesa mesa = lockMesa(mesaId);
+        resolveDueTimeouts(mesa);
         syncMesaState(mesa);
+        mesa = mesaRepository.save(mesa);
         return tableSnapshot(mesa, token);
     }
 
@@ -140,6 +196,7 @@ public class MultiplayerService {
     public TableSnapshot joinTable(Long mesaId, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveDueTimeouts(mesa);
         mesa.getSpectatorSessionIds().add(session.getId());
         syncMesaState(mesa);
         mesa = mesaRepository.save(mesa);
@@ -178,6 +235,7 @@ public class MultiplayerService {
     public TableSnapshot sit(Long mesaId, String seat, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveDueTimeouts(mesa);
         if (currentPartida(mesa).filter(p -> p.getEstado() == EstadoPartida.IN_PROGRESS
                 || p.getEstado() == EstadoPartida.PLACING_SHIPS
                 || p.getEstado() == EstadoPartida.READY_TO_START).isPresent()) {
@@ -212,6 +270,7 @@ public class MultiplayerService {
     public TableSnapshot stand(Long mesaId, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveDueTimeouts(mesa);
         if (requiresForfeit(mesa)) {
             resignLocked(mesa, session, true);
         } else if (isSeat(mesa.getSeatA(), session)) {
@@ -233,6 +292,7 @@ public class MultiplayerService {
     public TableSnapshot ready(Long mesaId, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveDueTimeouts(mesa);
         if (mesa.getSeatA() == null || mesa.getSeatB() == null) {
             throw conflict("Se necesitan dos jugadores sentados");
         }
@@ -263,11 +323,15 @@ public class MultiplayerService {
     public TableSnapshot placeShips(Long mesaId, String token, ShipPlacementRequest request) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveDueTimeouts(mesa);
         Partida partida = currentPartida(mesa).orElseThrow(() -> conflict("No hay partida en preparacion"));
         if (partida.getEstado() != EstadoPartida.PLACING_SHIPS && partida.getEstado() != EstadoPartida.READY_TO_START) {
             throw conflict("No se pueden colocar barcos en el estado actual");
         }
         Jugador jugador = seatedJugador(mesa, session);
+        if (boardPlaced(partida, jugador)) {
+            throw conflict("Tu flota ya fue colocada");
+        }
         BoardBuild board = validateFleet(request);
         Tablero tablero = tableroRepository.findByJugadorIdAndPartidaId(jugador.getId(), partida.getId())
                 .orElseGet(() -> {
@@ -283,11 +347,7 @@ public class MultiplayerService {
 
         boolean bothPlaced = boardPlaced(partida, mesa.getSeatA()) && boardPlaced(partida, mesa.getSeatB());
         if (bothPlaced) {
-            partida.setEstado(EstadoPartida.IN_PROGRESS);
-            partida.setInicio(partida.getInicio() == null ? Instant.now() : partida.getInicio());
-            if (partida.getTurnoActualJugadorId() == null) {
-                partida.setTurnoActualJugadorId(new Random().nextBoolean() ? mesa.getSeatA().getId() : mesa.getSeatB().getId());
-            }
+            startInProgress(partida, mesa);
         } else {
             partida.setEstado(EstadoPartida.PLACING_SHIPS);
         }
@@ -302,6 +362,7 @@ public class MultiplayerService {
     public ShotResult shoot(Long mesaId, String token, ShotRequest request) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveDueTimeouts(mesa);
         Partida partida = currentPartida(mesa).orElseThrow(() -> conflict("No hay partida activa"));
         if (partida.getEstado() != EstadoPartida.IN_PROGRESS) {
             throw conflict("La partida no esta en curso");
@@ -311,6 +372,11 @@ public class MultiplayerService {
             throw conflict("No es tu turno");
         }
         String position = normalizePosition(request == null ? null : request.position());
+        return applyShot(mesa, partida, atacante, position, false, "MANUAL");
+    }
+
+    private ShotResult applyShot(Mesa mesa, Partida partida, Jugador atacante, String position, boolean automatic,
+            String reason) {
         Jugador defensor = opponent(mesa, atacante);
         Tablero tableroDefensor = tableroRepository.findByJugadorIdAndPartidaId(defensor.getId(), partida.getId())
                 .orElseThrow(() -> conflict("El oponente aun no ha colocado sus barcos"));
@@ -342,28 +408,251 @@ public class MultiplayerService {
         disparo.setAcierto(hit);
         disparo.setResultado(result);
         disparo.setBarcoHundido(sunkShip);
+        disparo.setAutomatic(automatic);
+        disparo.setReason(reason);
         disparo.setTimestamp(Instant.now());
         disparoRepository.save(disparo);
 
         Long winnerId = null;
         if (win) {
+            partida.setTurnDeadlineAt(null);
+            partida.setTurnoActualJugadorId(null);
             finishMatch(partida, atacante, defensor, false);
             mesa.setEstado(EstadoPartida.FINISHED);
             winnerId = atacante.getId();
         } else {
-            partida.setTurnoActualJugadorId(defensor.getId());
+            partida.setTurnoActualJugadorId(hit ? atacante.getId() : defensor.getId());
+            partida.setTurnDeadlineAt(Instant.now().plus(TURN_LIMIT));
+            partidaRepository.save(partida);
+        }
+        if (automatic) {
+            partida.setLastAutoActionAt(Instant.now());
             partidaRepository.save(partida);
         }
         mesaRepository.save(mesa);
         broadcastRoomAndTable(mesa);
         return new ShotResult(mesa.getId(), partida.getId(), atacante.getId(), defensor.getId(), position, result, hit,
-                sunkShip, winnerId, partida.getTurnoActualJugadorId());
+                sunkShip, automatic, reason, winnerId, partida.getTurnoActualJugadorId());
+    }
+
+    private void resolveDueTimeoutsForAllActive() {
+        Set<Long> mesaIds = partidaRepository.findByEstadoIn(ACTIVE_STATES).stream()
+                .map(Partida::getMesa)
+                .filter(Objects::nonNull)
+                .map(Mesa::getId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        for (Long mesaId : mesaIds) {
+            mesaRepository.findByIdForUpdate(mesaId).ifPresent(this::resolveDueTimeouts);
+        }
+    }
+
+    private boolean resolveDueTimeouts(Mesa mesa) {
+        Partida partida = currentPartida(mesa).orElse(null);
+        if (partida == null || !ACTIVE_STATES.contains(partida.getEstado())) {
+            return false;
+        }
+        if (!RULESET.equals(partida.getRuleset())) {
+            partida.setEstado(EstadoPartida.CANCELLED);
+            partida.setFin(Instant.now());
+            partidaRepository.save(partida);
+            mesa.setSeatA(null);
+            mesa.setSeatB(null);
+            mesa.setReadyA(false);
+            mesa.setReadyB(false);
+            mesa.setEstado(EstadoPartida.WAITING_FOR_PLAYERS);
+            mesaRepository.save(mesa);
+            broadcastRoomAndTable(mesa);
+            return true;
+        }
+
+        Instant now = Instant.now();
+        if ((partida.getEstado() == EstadoPartida.PLACING_SHIPS || partida.getEstado() == EstadoPartida.READY_TO_START)
+                && partida.getPlacementDeadlineAt() == null) {
+            partida.setPlacementDeadlineAt(now.plus(PLACEMENT_LIMIT));
+            partidaRepository.save(partida);
+            return true;
+        }
+        if (partida.getEstado() == EstadoPartida.IN_PROGRESS && partida.getTurnDeadlineAt() == null) {
+            partida.setTurnDeadlineAt(now.plus(TURN_LIMIT));
+            partidaRepository.save(partida);
+            return true;
+        }
+
+        if ((partida.getEstado() == EstadoPartida.PLACING_SHIPS || partida.getEstado() == EstadoPartida.READY_TO_START)
+                && partida.getPlacementDeadlineAt() != null
+                && !now.isBefore(partida.getPlacementDeadlineAt())) {
+            boolean changed = false;
+            if (mesa.getSeatA() != null && !boardPlaced(partida, mesa.getSeatA())) {
+                autoPlaceFleet(partida, mesa.getSeatA());
+                changed = true;
+            }
+            if (mesa.getSeatB() != null && !boardPlaced(partida, mesa.getSeatB())) {
+                autoPlaceFleet(partida, mesa.getSeatB());
+                changed = true;
+            }
+            if (boardPlaced(partida, mesa.getSeatA()) && boardPlaced(partida, mesa.getSeatB())) {
+                startInProgress(partida, mesa);
+                changed = true;
+            }
+            if (changed) {
+                partida.setLastAutoActionAt(now);
+                partidaRepository.save(partida);
+                mesaRepository.save(mesa);
+                broadcastRoomAndTable(mesa);
+            }
+            return changed;
+        }
+
+        if (partida.getEstado() == EstadoPartida.IN_PROGRESS
+                && partida.getTurnDeadlineAt() != null
+                && !now.isBefore(partida.getTurnDeadlineAt())) {
+            Jugador atacante = playerById(mesa, partida.getTurnoActualJugadorId());
+            if (atacante == null) {
+                return false;
+            }
+            String position = randomUnattackedPosition(partida, opponent(mesa, atacante));
+            if (position == null) {
+                return false;
+            }
+            applyShot(mesa, partida, atacante, position, true, "SHOT_TIMEOUT");
+            return true;
+        }
+        return false;
+    }
+
+    private void startInProgress(Partida partida, Mesa mesa) {
+        partida.setEstado(EstadoPartida.IN_PROGRESS);
+        partida.setInicio(partida.getInicio() == null ? Instant.now() : partida.getInicio());
+        if (partida.getTurnoActualJugadorId() == null) {
+            partida.setTurnoActualJugadorId(new Random().nextBoolean() ? mesa.getSeatA().getId() : mesa.getSeatB().getId());
+        }
+        partida.setTurnDeadlineAt(Instant.now().plus(TURN_LIMIT));
+        mesa.setEstado(EstadoPartida.IN_PROGRESS);
+    }
+
+    private Jugador playerById(Mesa mesa, Long jugadorId) {
+        if (jugadorId == null) {
+            return null;
+        }
+        if (mesa.getSeatA() != null && Objects.equals(mesa.getSeatA().getId(), jugadorId)) {
+            return mesa.getSeatA();
+        }
+        if (mesa.getSeatB() != null && Objects.equals(mesa.getSeatB().getId(), jugadorId)) {
+            return mesa.getSeatB();
+        }
+        return null;
+    }
+
+    private String randomUnattackedPosition(Partida partida, Jugador defender) {
+        Tablero tablero = tableroRepository.findByJugadorIdAndPartidaId(defender.getId(), partida.getId())
+                .orElse(null);
+        if (tablero == null) {
+            return null;
+        }
+        Set<String> attacked = tablero.getPosicionesAtacadas() == null ? Set.of() : tablero.getPosicionesAtacadas().keySet();
+        List<String> candidates = allCells().stream()
+                .filter(cell -> !attacked.contains(cell))
+                .toList();
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        return candidates.get(new Random().nextInt(candidates.size()));
+    }
+
+    private List<String> allCells() {
+        List<String> cells = new ArrayList<>(BOARD_SIZE * BOARD_SIZE);
+        for (int row = 0; row < BOARD_SIZE; row++) {
+            for (int col = 1; col <= BOARD_SIZE; col++) {
+                cells.add(String.valueOf((char) ('A' + row)) + col);
+            }
+        }
+        return cells;
+    }
+
+    private void autoPlaceFleet(Partida partida, Jugador jugador) {
+        if (jugador == null || boardPlaced(partida, jugador)) {
+            return;
+        }
+        BoardBuild board = randomFleetBuild();
+        Tablero tablero = tableroRepository.findByJugadorIdAndPartidaId(jugador.getId(), partida.getId())
+                .orElseGet(() -> {
+                    Tablero t = new Tablero();
+                    t.setPartida(partida);
+                    t.setJugador(jugador);
+                    return t;
+                });
+        tablero.setPosicionesBarcos(board.positions());
+        tablero.setBarcosPorCelda(board.shipsByCell());
+        tablero.setPosicionesAtacadas(new HashMap<>());
+        tableroRepository.save(tablero);
+    }
+
+    private BoardBuild randomFleetBuild() {
+        Random random = new Random();
+        for (int restart = 0; restart < 200; restart++) {
+            Map<String, Boolean> positions = new HashMap<>();
+            Map<String, String> shipsByCell = new HashMap<>();
+            boolean failed = false;
+            for (FleetShipSpec ship : FLEET) {
+                boolean placed = false;
+                for (int attempt = 0; attempt < 300 && !placed; attempt++) {
+                    boolean vertical = random.nextBoolean();
+                    int rowLimit = vertical ? BOARD_SIZE - ship.size() : BOARD_SIZE - 1;
+                    int colLimit = vertical ? BOARD_SIZE - 1 : BOARD_SIZE - ship.size();
+                    int row = random.nextInt(rowLimit + 1);
+                    int col = random.nextInt(colLimit + 1);
+                    List<String> cells = new ArrayList<>();
+                    for (int i = 0; i < ship.size(); i++) {
+                        int nextRow = vertical ? row + i : row;
+                        int nextCol = vertical ? col : col + i;
+                        cells.add(String.valueOf((char) ('A' + nextRow)) + (nextCol + 1));
+                    }
+                    if (canPlaceRandomShip(cells, shipsByCell)) {
+                        for (String cell : cells) {
+                            positions.put(cell, true);
+                            shipsByCell.put(cell, ship.key());
+                        }
+                        placed = true;
+                    }
+                }
+                if (!placed) {
+                    failed = true;
+                    break;
+                }
+            }
+            if (!failed) {
+                return new BoardBuild(positions, shipsByCell);
+            }
+        }
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo generar flota automatica");
+    }
+
+    private boolean canPlaceRandomShip(List<String> cells, Map<String, String> shipsByCell) {
+        for (String cell : cells) {
+            if (shipsByCell.containsKey(cell)) {
+                return false;
+            }
+            Cell parsed = parseCell(cell);
+            for (int row = parsed.row() - 1; row <= parsed.row() + 1; row++) {
+                for (int col = parsed.col() - 1; col <= parsed.col() + 1; col++) {
+                    if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) {
+                        continue;
+                    }
+                    String neighbor = String.valueOf((char) ('A' + row)) + (col + 1);
+                    if (shipsByCell.containsKey(neighbor)) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     @Transactional
     public TableSnapshot resign(Long mesaId, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveDueTimeouts(mesa);
         resignLocked(mesa, session, true);
         mesa = mesaRepository.save(mesa);
         broadcastRoomAndTable(mesa);
@@ -374,6 +663,7 @@ public class MultiplayerService {
     public TableSnapshot rematch(Long mesaId, String token) {
         SesionJugador session = requireSession(token);
         Mesa mesa = lockMesa(mesaId);
+        resolveDueTimeouts(mesa);
         Partida current = currentPartida(mesa).orElseThrow(() -> conflict("No hay partida para revancha"));
         if (current.getEstado() != EstadoPartida.FINISHED && current.getEstado() != EstadoPartida.ABANDONED) {
             throw conflict("La revancha solo esta disponible al terminar");
@@ -472,6 +762,11 @@ public class MultiplayerService {
                 mesa.getSala() == null ? null : mesa.getSala().getNombre(),
                 mesa.getNombre(),
                 mesa.getEstado().name(),
+                Instant.now(),
+                partida.map(Partida::getPlacementDeadlineAt).orElse(null),
+                partida.map(Partida::getTurnDeadlineAt).orElse(null),
+                partida.map(Partida::getRuleset).orElse(RULESET),
+                FLEET,
                 seatA,
                 seatB,
                 mySeat,
@@ -546,6 +841,8 @@ public class MultiplayerService {
                         d.isAcierto(),
                         d.getResultado(),
                         d.getBarcoHundido(),
+                        d.isAutomatic(),
+                        d.getReason(),
                         d.getTimestamp()))
                 .toList();
     }
@@ -581,32 +878,49 @@ public class MultiplayerService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debes enviar la flota completa");
         }
         Map<String, ShipPlacement> byKey = request.ships().stream()
-                .collect(Collectors.toMap(s -> normalizeShipKey(s.key()), Function.identity(), (a, b) -> {
+                .collect(Collectors.toMap(s -> normalizeShipKey(s.key()), ship -> ship, (a, b) -> {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Barco duplicado: " + a.key());
-                }));
-        if (!byKey.keySet().equals(FLEET.keySet())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La flota debe contener carrier, battleship, cruiser, submarine y destroyer");
+                }, LinkedHashMap::new));
+        if (!byKey.keySet().equals(FLEET_BY_KEY.keySet())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La flota debe contener los 10 barcos clasicos");
         }
         Map<String, Boolean> positions = new HashMap<>();
         Map<String, String> shipsByCell = new HashMap<>();
-        for (Map.Entry<String, Integer> required : FLEET.entrySet()) {
-            ShipPlacement ship = byKey.get(required.getKey());
+        for (FleetShipSpec required : FLEET) {
+            ShipPlacement ship = byKey.get(required.key());
             List<String> cells = ship.cells() == null ? List.of() : ship.cells().stream()
                     .map(this::normalizePosition)
                     .toList();
-            if (ship.size() != required.getValue() || cells.size() != required.getValue()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tamano incorrecto para " + required.getKey());
+            if (ship.size() != required.size() || cells.size() != required.size()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tamano incorrecto para " + required.key());
             }
-            validateLine(required.getKey(), cells);
+            validateLine(required.key(), cells);
             for (String cell : cells) {
                 if (positions.containsKey(cell)) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Los barcos no pueden superponerse");
                 }
                 positions.put(cell, true);
-                shipsByCell.put(cell, required.getKey());
+                shipsByCell.put(cell, required.key());
             }
         }
+        validateNoAdjacentShips(shipsByCell);
         return new BoardBuild(positions, shipsByCell);
+    }
+
+    private void validateNoAdjacentShips(Map<String, String> shipsByCell) {
+        List<Map.Entry<String, String>> entries = new ArrayList<>(shipsByCell.entrySet());
+        for (int i = 0; i < entries.size(); i++) {
+            Cell a = parseCell(entries.get(i).getKey());
+            for (int j = i + 1; j < entries.size(); j++) {
+                if (entries.get(i).getValue().equals(entries.get(j).getValue())) {
+                    continue;
+                }
+                Cell b = parseCell(entries.get(j).getKey());
+                if (Math.abs(a.row() - b.row()) <= 1 && Math.abs(a.col() - b.col()) <= 1) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Los barcos no pueden tocarse");
+                }
+            }
+        }
     }
 
     private void validateLine(String shipKey, List<String> cells) {
@@ -653,11 +967,15 @@ public class MultiplayerService {
         if (mesa.getSeatA() == null || mesa.getSeatB() == null) {
             throw conflict("Se necesitan dos jugadores");
         }
+        Instant now = Instant.now();
         Partida partida = new Partida();
         partida.setMesa(mesa);
         partida.setSala(mesa.getSala());
         partida.setEstado(EstadoPartida.PLACING_SHIPS);
-        partida.setInicio(Instant.now());
+        partida.setRuleset(RULESET);
+        partida.setInicio(now);
+        partida.setPlacementDeadlineAt(now.plus(PLACEMENT_LIMIT));
+        partida.setTurnDeadlineAt(null);
         partida.setTurnoActualJugadorId(new Random().nextBoolean() ? mesa.getSeatA().getId() : mesa.getSeatB().getId());
         partida = partidaRepository.save(partida);
         createParticipation(partida, mesa.getSeatA(), 1);
@@ -886,8 +1204,8 @@ public class MultiplayerService {
     }
 
     private boolean hasFleet(Tablero tablero) {
-        return tablero.getPosicionesBarcos() != null && tablero.getPosicionesBarcos().size() == 17
-                && tablero.getBarcosPorCelda() != null && tablero.getBarcosPorCelda().size() == 17;
+        return tablero.getPosicionesBarcos() != null && tablero.getPosicionesBarcos().size() == FLEET_CELLS
+                && tablero.getBarcosPorCelda() != null && tablero.getBarcosPorCelda().size() == FLEET_CELLS;
     }
 
     private boolean shouldReveal(Partida partida) {
@@ -937,7 +1255,7 @@ public class MultiplayerService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Barco sin clave");
         }
         String normalized = key.trim().toLowerCase(Locale.ROOT);
-        if (!FLEET.containsKey(normalized)) {
+        if (!FLEET_BY_KEY.containsKey(normalized)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Barco desconocido: " + key);
         }
         return normalized;

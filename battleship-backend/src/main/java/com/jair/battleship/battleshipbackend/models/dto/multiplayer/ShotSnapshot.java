@@ -9,5 +9,7 @@ public record ShotSnapshot(
         boolean acierto,
         String resultado,
         String barcoHundido,
+        boolean automatic,
+        String reason,
         Instant ts) {
 }

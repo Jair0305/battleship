@@ -9,6 +9,8 @@ public record ShotResult(
         String result,
         boolean hit,
         String sunkShip,
+        boolean automatic,
+        String reason,
         Long winnerId,
         Long nextTurnJugadorId) {
 }

@@ -43,5 +43,9 @@ public class Disparo {
 
     private String barcoHundido;
 
+    private boolean automatic = false;
+
+    private String reason = "MANUAL";
+
     private Instant timestamp = Instant.now();
 }
