@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist, Geist_Mono, Pixelify_Sans } from "next/font/google";
 import "./globals.css";
 import Header from './components/Header';
+import { GameFooter, GameShell } from "./components/nightly/primitives";
 
-const inter = Inter({ subsets: ["latin"] });
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
+const pixel = Pixelify_Sans({ subsets: ["latin"], variable: "--font-pixel" });
+const nightlyNav = <Header />;
+const nightlyFooter = <GameFooter />;
 
 export const metadata: Metadata = {
-  title: "Battleship",
-  description: "Battleship Game",
+  title: "Nightly Games | Battleship",
+  description: "Battleship en la plataforma Nightly Games",
 };
 
 export default function RootLayout({
@@ -17,11 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-slate-950 text-slate-50`}>
-        <Header />
-        <main className="container mx-auto p-4">
+      <body className={`${geist.variable} ${geistMono.variable} ${pixel.variable} bg-night font-ui text-night-text`}>
+        <GameShell nav={nightlyNav} footer={nightlyFooter}>
           {children}
-        </main>
+        </GameShell>
       </body>
     </html>
   );

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { register } from "../lib/api";
+import { ErrorState, GameButton, GamePanel, gameButtonClassName } from "../components/nightly/primitives";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -32,59 +33,53 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-96px)] max-w-md items-center px-4">
-      <form onSubmit={onSubmit} className="glass-card w-full rounded-lg p-6">
-        <h1 className="text-2xl font-bold text-white">Crear cuenta</h1>
-        <p className="mt-1 text-sm text-slate-400">La cuenta registrada participa en rating Elo.</p>
-
-        <label className="mt-6 block text-sm text-slate-300">
-          Usuario
-          <input
-            className="mt-2 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-emerald-500"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            required
-          />
-        </label>
-
-        <label className="mt-4 block text-sm text-slate-300">
-          Contrasena
-          <input
-            type="password"
-            className="mt-2 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-emerald-500"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-        </label>
-
-        <label className="mt-4 block text-sm text-slate-300">
-          Confirmar contrasena
-          <input
-            type="password"
-            className="mt-2 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none focus:border-emerald-500"
-            value={passwordConfirm}
-            onChange={(event) => setPasswordConfirm(event.target.value)}
-            required
-          />
-        </label>
-
-        {error && <div className="mt-4 rounded border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
-
-        <button
-          disabled={loading}
-          className="mt-6 w-full rounded bg-emerald-600 px-4 py-2 font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-60"
-        >
-          {loading ? "Creando..." : "Crear cuenta"}
-        </button>
-
-        <div className="mt-4 text-center text-sm text-slate-400">
+    <div className="mx-auto grid min-h-[calc(100dvh-180px)] max-w-md place-items-center py-10">
+      <GamePanel title="Crear cuenta" eyebrow="rating profile" className="w-full nightly-scanline">
+        <p className="text-sm leading-6 text-night-muted">Registro simple: usuario y dos veces contrasena. Las partidas rated usan esta cuenta.</p>
+        <form onSubmit={onSubmit} className="mt-6 space-y-4">
+          <Field label="Usuario" value={username} onChange={setUsername} autoComplete="username" />
+          <Field label="Contrasena" type="password" value={password} onChange={setPassword} autoComplete="new-password" />
+          <Field label="Confirmar contrasena" type="password" value={passwordConfirm} onChange={setPasswordConfirm} autoComplete="new-password" />
+          {error && <ErrorState body={error} />}
+          <GameButton type="submit" disabled={loading} className="w-full">
+            {loading ? "Creando..." : "Crear cuenta"}
+          </GameButton>
+        </form>
+        <div className="mt-4 text-center text-sm text-night-muted">
           Ya tienes cuenta?{" "}
-          <Link href="/login" className="text-emerald-300 hover:text-emerald-200">
+          <Link href="/login" className={gameButtonClassName("ghost", "sm")}>
             Inicia sesion
           </Link>
         </div>
-      </form>
+      </GamePanel>
     </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  autoComplete,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  autoComplete?: string;
+}) {
+  return (
+    <label className="block text-sm text-night-muted">
+      <span className="font-mono text-[0.68rem] uppercase tracking-[0.18em]">{label}</span>
+      <input
+        type={type}
+        className="nightly-input mt-2"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        autoComplete={autoComplete}
+        required
+      />
+    </label>
   );
 }

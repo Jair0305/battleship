@@ -6,6 +6,18 @@ import Leaderboard from "./Leaderboard";
 import { api } from "../lib/api";
 import type { LobbySnapshot, RoomSnapshot, TableSnapshot } from "../lib/types";
 import { useRealtime } from "../hooks/useRealtime";
+import {
+  EmptyState,
+  ErrorState,
+  GameBadge,
+  GameButton,
+  GameCard,
+  GamePanel,
+  GameScore,
+  GameSection,
+  GameStatus,
+  LoadingState,
+} from "./nightly/primitives";
 
 const stateLabel: Record<string, string> = {
   WAITING_FOR_PLAYERS: "Esperando",
@@ -48,6 +60,8 @@ export default function Salas() {
   ]);
 
   const rooms = useMemo(() => lobby?.salas ?? [], [lobby]);
+  const onlineCount = lobby?.onlinePlayers.length ?? 0;
+  const tableCount = rooms.reduce((count, room) => count + room.mesas.length, 0);
 
   const createTable = async (room: RoomSnapshot) => {
     setCreatingSalaId(room.id);
@@ -72,31 +86,30 @@ export default function Salas() {
   };
 
   return (
-    <div className="grid min-h-[calc(100vh-104px)] gap-6 lg:grid-cols-[1fr_320px]">
-      <section className="space-y-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Lobby publico</h1>
-            <p className="text-sm text-slate-400">Mesas rapidas, asientos claros y espectadores sin friccion.</p>
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <GameSection
+        eyebrow="public lobby"
+        title="Mesas activas"
+        description="Crea una mesa, ocupa un asiento o mira una partida como espectador. Las notificaciones publicas solo invalidan snapshots privados."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <GameStatus label="Socket" value={connected ? "Tiempo real" : "Reconectando"} tone={connected ? "success" : "warning"} pulse={!connected} />
+            <GameButton variant="secondary" onClick={refresh}>Refrescar</GameButton>
           </div>
-          <div className="flex items-center gap-3">
-            <span className={`rounded px-2 py-1 text-xs ${connected ? "bg-emerald-500/10 text-emerald-300" : "bg-amber-500/10 text-amber-300"}`}>
-              {connected ? "Tiempo real" : "Reconectando"}
-            </span>
-            <button
-              type="button"
-              onClick={refresh}
-              className="rounded border border-slate-700 px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-800"
-            >
-              Refrescar
-            </button>
-          </div>
+        }
+      >
+        <div className="grid gap-3 md:grid-cols-3">
+          <GameScore label="Usuarios" value={onlineCount} />
+          <GameScore label="Mesas" value={tableCount} />
+          <GameScore label="Reglas" value="Classic" />
         </div>
 
-        {error && <div className="rounded border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+        {error && <ErrorState body={error} />}
 
         {loading ? (
-          <div className="glass-card rounded-lg p-8 text-center text-slate-400">Cargando lobby...</div>
+          <LoadingState title="Cargando lobby" body="Buscando salas, mesas y jugadores online." />
+        ) : rooms.length === 0 ? (
+          <EmptyState title="Sin salas disponibles" body="El lobby aun no tiene salas publicadas por el backend." />
         ) : (
           <div className="space-y-5">
             {rooms.map((room) => (
@@ -110,24 +123,23 @@ export default function Salas() {
             ))}
           </div>
         )}
-      </section>
+      </GameSection>
 
-      <aside className="space-y-5">
-        <div className="glass-card rounded-lg p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Usuarios en lobby</h2>
-          <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
+      <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+        <GamePanel title="Usuarios online" eyebrow="lobby presence">
+          <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
             {(lobby?.onlinePlayers ?? []).length === 0 ? (
-              <div className="text-sm text-slate-500">Sin usuarios conectados</div>
+              <EmptyState title="Lobby vacio" body="Cuando alguien entre, aparecera aqui." />
             ) : (
               lobby!.onlinePlayers.map((player) => (
-                <div key={player.id} className="flex items-center justify-between rounded bg-slate-900/60 px-3 py-2 text-sm">
-                  <span className="truncate text-slate-200">{player.displayName}</span>
-                  <span className="text-xs text-slate-500">{player.guest ? "Invitado" : player.rating}</span>
-                </div>
+                <GameCard key={player.id} className="flex items-center justify-between gap-3 p-3">
+                  <span className="min-w-0 truncate text-sm text-night-text">{player.displayName}</span>
+                  <GameBadge tone={player.guest ? "neutral" : "accent"}>{player.guest ? "Invitado" : player.rating}</GameBadge>
+                </GameCard>
               ))
             )}
           </div>
-        </div>
+        </GamePanel>
         <Leaderboard />
       </aside>
     </div>
@@ -146,73 +158,67 @@ function RoomPanel({
   onJoin: (table: TableSnapshot) => void;
 }) {
   return (
-    <div className="glass-card rounded-lg p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-white">{room.nombre}</h2>
-          <div className="mt-1 text-sm text-slate-400">
-            {room.onlinePlayers} jugadores sentados · {room.spectators} espectadores
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onCreate}
-          disabled={creating}
-          className="rounded bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-60"
-        >
-          {creating ? "Creando..." : "Crear mesa"}
-        </button>
+    <GamePanel
+      title={room.nombre}
+      eyebrow="room cluster"
+      action={<GameButton onClick={onCreate} disabled={creating}>{creating ? "Creando..." : "Crear mesa"}</GameButton>}
+      className="nightly-scanline"
+    >
+      <div className="mb-4 flex flex-wrap gap-2">
+        <GameBadge tone="accent">{room.onlinePlayers} jugadores</GameBadge>
+        <GameBadge>{room.spectators} espectadores</GameBadge>
+        <GameBadge tone={room.disponible ? "success" : "warning"}>{room.disponible ? "Disponible" : "Cerrada"}</GameBadge>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {room.mesas.map((table) => (
-          <TableCard key={table.id} table={table} onJoin={() => onJoin(table)} />
-        ))}
-      </div>
-    </div>
+      {room.mesas.length === 0 ? (
+        <EmptyState title="Sin mesas" body="Crea una mesa nueva para abrir partida en esta sala." />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {room.mesas.map((table, index) => (
+            <TableCard key={table.id} table={table} index={index} onJoin={() => onJoin(table)} />
+          ))}
+        </div>
+      )}
+    </GamePanel>
   );
 }
 
-function TableCard({ table, onJoin }: { table: TableSnapshot; onJoin: () => void }) {
+function TableCard({ table, index, onJoin }: { table: TableSnapshot; index: number; onJoin: () => void }) {
   const seats = [table.seatA, table.seatB];
   const isJoinable = table.estado !== "CANCELLED";
 
   return (
-    <article className="rounded border border-slate-800 bg-slate-950/60 p-4">
+    <GameCard interactive className="flex min-h-64 flex-col" tone={table.estado === "IN_PROGRESS" ? "accent" : "neutral"}>
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold text-slate-100">{table.nombre}</h3>
-          <div className="mt-1 text-xs text-slate-500">Mesa #{table.id}</div>
+        <div className="min-w-0">
+          <div className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-night-faint">table {String(index + 1).padStart(2, "0")}</div>
+          <h3 className="mt-1 truncate font-display text-2xl uppercase text-night-text">{table.nombre}</h3>
+          <div className="mt-1 font-mono text-xs text-night-faint">Mesa #{table.id}</div>
         </div>
-        <span className="rounded bg-slate-800 px-2 py-1 text-xs text-slate-300">
+        <GameBadge tone={table.estado === "IN_PROGRESS" ? "accent" : table.estado === "FINISHED" ? "success" : "neutral"}>
           {stateLabel[table.estado] ?? table.estado}
-        </span>
+        </GameBadge>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-5 flex-1 space-y-2">
         {seats.map((seat) => (
-          <div key={seat.seat} className="flex items-center justify-between rounded bg-slate-900/70 px-3 py-2 text-sm">
-            <span className="text-slate-400">Asiento {seat.seat}</span>
-            <span className={seat.occupied ? "text-slate-100" : "text-slate-500"}>
+          <div key={seat.seat} className="flex items-center justify-between gap-3 rounded-night-sm border border-white/10 bg-[#090909]/60 px-3 py-2 text-sm">
+            <span className="font-mono text-xs uppercase tracking-[0.16em] text-night-faint">Seat {seat.seat}</span>
+            <span className={seat.occupied ? "min-w-0 truncate text-night-text" : "text-night-faint"}>
               {seat.displayName || "Libre"}
             </span>
           </div>
         ))}
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-        <span>{table.spectators} espectadores</span>
-        {table.privateView?.opponentShipsPlaced && <span>Oponente listo</span>}
+      <div className="mt-4 flex items-center justify-between text-xs text-night-faint">
+        <span className="font-mono">{table.spectators} spectators</span>
+        {table.privateView?.opponentShipsPlaced && <span className="text-night-accent">Rival listo</span>}
       </div>
 
-      <button
-        type="button"
-        onClick={onJoin}
-        disabled={!isJoinable}
-        className="mt-4 w-full rounded border border-cyan-500/40 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-      >
+      <GameButton onClick={onJoin} disabled={!isJoinable} variant={table.estado === "CANCELLED" ? "ghost" : "secondary"} className="mt-4 w-full">
         Entrar
-      </button>
-    </article>
+      </GameButton>
+    </GameCard>
   );
 }

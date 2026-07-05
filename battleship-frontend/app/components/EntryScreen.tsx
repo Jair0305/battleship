@@ -4,6 +4,16 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { createGuest, login, register } from "../lib/api";
 import type { SessionUser } from "../lib/types";
+import {
+  ErrorState,
+  GameBadge,
+  GameButton as NightlyButton,
+  GameCard,
+  GameHero,
+  GamePanel,
+  GameScore,
+  cn,
+} from "./nightly/primitives";
 
 type AuthMode = "login" | "register" | "guest";
 
@@ -12,6 +22,16 @@ const tabs: Array<{ key: AuthMode; label: string }> = [
   { key: "register", label: "Registro" },
   { key: "guest", label: "Invitado" },
 ];
+
+const heroEyebrow = <GameBadge tone="accent">Nightly public table</GameBadge>;
+const heroTitle = <>Battle<wbr />ship protocol</>;
+const heroStats = (
+  <div className="grid max-w-2xl grid-cols-3 gap-3">
+    <GameScore label="Board" value="10x10" />
+    <GameScore label="Fleet" value="10" />
+    <GameScore label="Mode" value="Live" />
+  </div>
+);
 
 export default function EntryScreen({ onAuthenticated }: { onAuthenticated?: (session: SessionUser) => void }) {
   const [mode, setMode] = useState<AuthMode>("login");
@@ -101,20 +121,16 @@ export default function EntryScreen({ onAuthenticated }: { onAuthenticated?: (se
       );
 
   return (
-    <main className="min-h-[calc(100vh-64px)] bg-[url('/grid.svg')] bg-center px-4 py-8">
-      <div className="mx-auto grid min-h-[calc(100vh-128px)] max-w-5xl items-center gap-6 lg:grid-cols-[1fr_420px]">
-        <section className="space-y-4">
-          <div className="inline-flex items-center gap-2 rounded border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-sm text-cyan-100">
-            Battleship publico
-          </div>
-          <h1 className="max-w-2xl text-4xl font-bold text-white md:text-5xl">Entra para jugar una mesa</h1>
-          <p className="max-w-xl text-sm leading-6 text-slate-300">
-            Cuenta registrada para rating, o invitado para jugar rapido. La mesa arranca cuando los dos jugadores esten listos.
-          </p>
-        </section>
-
-        <section className="glass-card rounded-lg p-5">
-          <div className="grid grid-cols-3 rounded border border-slate-800 bg-slate-950/70 p-1">
+    <GameHero
+      eyebrow={heroEyebrow}
+      title={heroTitle}
+      copy="Una mesa publica, rating competitivo y partidas clasicas 10x10 bajo una identidad visual lista para todos los juegos de Nightly."
+      stats={heroStats}
+    >
+      <div className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
+        <AuthPreview />
+        <GamePanel title={mode === "login" ? "Iniciar sesion" : mode === "register" ? "Registro simple" : "Entrar como invitado"} eyebrow="access node" className="nightly-scanline">
+          <div className="grid grid-cols-3 rounded-night-sm border border-white/10 bg-[#090909]/70 p-1">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -123,30 +139,58 @@ export default function EntryScreen({ onAuthenticated }: { onAuthenticated?: (se
                   setMode(tab.key);
                   setError(null);
                 }}
-                className={`rounded px-3 py-2 text-sm font-semibold transition ${
-                  mode === tab.key ? "bg-cyan-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                }`}
+                className={cn(
+                  "rounded-night-sm px-3 py-2 font-mono text-xs font-semibold uppercase tracking-[0.15em] transition-all duration-200 ease-night",
+                  mode === tab.key ? "bg-night-accent text-[#111409]" : "text-night-muted hover:bg-white/[0.04] hover:text-night-text",
+                )}
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
-          <div className="mt-5">
-            <h2 className="text-xl font-semibold text-white">
-              {mode === "login" ? "Iniciar sesion" : mode === "register" ? "Registro simple" : "Entrar como invitado"}
-            </h2>
-            <p className="mt-1 text-sm text-slate-400">
-              {mode === "register" ? "Usuario, contrasena y confirmacion. Nada mas." : mode === "guest" ? "Sin rating, listo para jugar." : "Usa tu usuario y contrasena."}
-            </p>
-          </div>
+          <p className="mt-5 text-sm leading-6 text-night-muted">
+            {mode === "register" ? "Usuario, contrasena y confirmacion. Nada mas." : mode === "guest" ? "Sin rating, listo para una partida rapida." : "Usa tu usuario y contrasena para conservar rating."}
+          </p>
 
-          {error && <div className="mt-4 rounded border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+          {error && <div className="mt-4"><ErrorState body={error} /></div>}
 
           <div className="mt-5">{form}</div>
-        </section>
+        </GamePanel>
       </div>
-    </main>
+    </GameHero>
+  );
+}
+
+function AuthPreview() {
+  const cells = Array.from({ length: 36 }, (_, index) => index);
+
+  return (
+    <GameCard className="nightly-scanline hidden min-h-[420px] overflow-hidden p-5 lg:block" tone="accent">
+      <div className="flex items-center justify-between border-b border-white/10 pb-3 font-mono text-[0.64rem] uppercase tracking-[0.2em] text-night-faint">
+        <span>asset explorer</span>
+        <span>ng-battle-01</span>
+      </div>
+      <div className="mt-8 grid grid-cols-6 gap-2">
+        {cells.map((cell) => (
+          <div
+            key={cell}
+            className={cn(
+              "aspect-square rounded-night-sm border border-white/10 bg-white/[0.03]",
+              cell % 7 === 0 && "bg-night-accent/20 border-night-accent/40",
+              cell % 11 === 0 && "translate-y-2",
+            )}
+          />
+        ))}
+      </div>
+      <div className="mt-10 space-y-3">
+        <div className="font-display text-5xl uppercase leading-none text-night-accent">&lt;play /&gt;</div>
+        <p className="max-w-xs font-mono text-xs leading-5 text-night-muted">
+          Public lobby, private boards, real-time invalidation and rematch flow.
+        </p>
+      </div>
+      <div className="absolute bottom-5 right-5 h-24 w-24 rounded-full border border-night-accent/20 bg-night-accent/10 blur-xl" />
+    </GameCard>
   );
 }
 
@@ -166,28 +210,32 @@ function Field({
   placeholder?: string;
 }) {
   return (
-    <label className="block text-sm text-slate-300">
-      {label}
+    <label className="block text-sm text-night-muted">
+      <span className="font-mono text-[0.68rem] uppercase tracking-[0.18em]">{label}</span>
       <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         autoComplete={autoComplete}
         placeholder={placeholder}
-        className="mt-2 w-full rounded border border-slate-700 bg-slate-950 px-3 py-2 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-500"
+        className="nightly-input mt-2"
       />
     </label>
   );
 }
 
-function PrimaryButton({ loading, label, loadingLabel }: { loading: boolean; label: string; loadingLabel: string }) {
+function PrimaryButton({
+  loading,
+  label,
+  loadingLabel,
+}: {
+  loading: boolean;
+  label: string;
+  loadingLabel: string;
+}) {
   return (
-    <button
-      type="submit"
-      disabled={loading}
-      className="w-full rounded bg-cyan-600 px-4 py-2 font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-60"
-    >
+    <NightlyButton type="submit" disabled={loading} className="w-full">
       {loading ? loadingLabel : label}
-    </button>
+    </NightlyButton>
   );
 }
