@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import SockJS from 'sockjs-client'
 import { Client, type IMessage, type StompSubscription } from '@stomp/stompjs'
-import { API_BASE } from '../lib/api'
+import { realtimeUrl } from '../lib/api'
 
 type SubscriptionSpec = {
   topic: string | null | undefined
@@ -17,7 +17,7 @@ export function useRealtime(subscriptions: SubscriptionSpec[]) {
     const activeSubs = subscriptions.filter((sub) => sub.topic)
     if (activeSubs.length === 0) return
 
-    const socket = new SockJS(`${API_BASE}/ws`)
+    const socket = new SockJS(realtimeUrl())
     const client = new Client({
       webSocketFactory: () => socket as WebSocket,
       reconnectDelay: 3000,

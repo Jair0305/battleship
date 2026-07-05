@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import { apiUrl, realtimeUrl } from "../lib/api";
 
 interface RankingItem {
     rank: number;
@@ -12,7 +13,6 @@ interface RankingItem {
     puntos: number;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 axios.defaults.withCredentials = true;
 
 export default function Leaderboard() {
@@ -21,7 +21,7 @@ export default function Leaderboard() {
 
     const fetchRanking = async (p: string) => {
         try {
-            const res = await axios.get(`${API_BASE}/api/ranking/${p}`);
+            const res = await axios.get(apiUrl(`/api/ranking/${p}`));
             setRanking(res.data);
         } catch (error) {
             console.error("Error fetching ranking:", error);
@@ -33,7 +33,7 @@ export default function Leaderboard() {
     }, [periodo]);
 
     useEffect(() => {
-        const socket = new SockJS(`${API_BASE}/ws`);
+        const socket = new SockJS(realtimeUrl());
         const client = new Client({
             webSocketFactory: () => socket,
             onConnect: () => {

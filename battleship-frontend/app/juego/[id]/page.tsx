@@ -4,10 +4,10 @@ import { useEffect, useMemo, useRef, useState, Fragment, useCallback } from 'rea
 import axios from 'axios';
 import SockJS from 'sockjs-client';
 import { Client as StompClient, IMessage } from '@stomp/stompjs';
+import { apiUrl, realtimeUrl } from '../../lib/api';
 
 axios.defaults.withCredentials = true;
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 const BOARD_SIZE = Number(process.env.NEXT_PUBLIC_BOARD_SIZE || 12);
 
 interface Sala {
@@ -264,7 +264,7 @@ export default function TableroPage() {
 
     useEffect(() => {
         if (estadoPartida === 'FINALIZADA' && partidaId && jugadorId) {
-            axios.get(`${API_BASE}/api/ranking/partida/${partidaId}/jugador/${jugadorId}`)
+            axios.get(apiUrl(`/api/ranking/partida/${partidaId}/jugador/${jugadorId}`))
                 .then(res => setScoreDetails(res.data))
                 .catch(err => console.error("Error fetching score:", err));
         } else {
@@ -372,7 +372,7 @@ export default function TableroPage() {
             return;
         }
         try {
-            const { data } = await axios.post<EstadoSalaMsg>(`${API_BASE}/api/juego/ready/${jugadorId}`);
+            const { data } = await axios.post<EstadoSalaMsg>(apiUrl(`/api/juego/ready/${jugadorId}`));
             setReadyCount(data.readyCount || 0);
             setStarted(Boolean(data.started));
             setDeadline(data.deadline ?? null);
@@ -427,7 +427,7 @@ export default function TableroPage() {
         try {
             const posiciones: Record<string, boolean> = {};
             placements.forEach(p => p.cells.forEach(k => posiciones[k] = true));
-            await axios.post(`${API_BASE}/api/partidas/${partidaId}/tablero/${jugadorId}`, posiciones);
+            await axios.post(apiUrl(`/api/partidas/${partidaId}/tablero/${jugadorId}`), posiciones);
             setPreparado(true);
         } catch { }
     }, [isSpectator, jugadorId, partidaId]);
@@ -437,21 +437,21 @@ export default function TableroPage() {
 
         if (isSpectator) {
             // Registrar entrada de espectador
-            axios.put(`${API_BASE}/api/sala/${params.id}/entrarEspectador`).catch(() => { });
+            axios.put(apiUrl(`/api/sala/${params.id}/entrarEspectador`)).catch(() => { });
 
             const handleUnload = () => {
-                navigator.sendBeacon(`${API_BASE}/api/sala/${params.id}/salirEspectador`);
+                navigator.sendBeacon(apiUrl(`/api/sala/${params.id}/salirEspectador`));
             };
             window.addEventListener('beforeunload', handleUnload);
             return () => {
                 window.removeEventListener('beforeunload', handleUnload);
-                axios.put(`${API_BASE}/api/sala/${params.id}/salirEspectador`).catch(() => { });
+                axios.put(apiUrl(`/api/sala/${params.id}/salirEspectador`)).catch(() => { });
             };
         } else if (jugadorId) {
             const handleBeforeUnload = () => {
                 // Solo liberar si NO ha empezado la partida o si explícitamente se quiere salir (manejado en salirSala)
                 // Si recarga la página, NO liberar para permitir reconexión
-                // navigator.sendBeacon(`${API_BASE}/api/sala/${params.id}/liberar`); 
+                // navigator.sendBeacon(apiUrl(`/api/sala/${params.id}/liberar`)); 
             };
             window.addEventListener('beforeunload', handleBeforeUnload);
             return () => window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -463,7 +463,7 @@ export default function TableroPage() {
         if (!p) return;
         try {
             const paramsReq = jugadorId ? { jugadorId } : {};
-            const { data } = await axios.get(`${API_BASE}/api/partidas/${p}/estado`, { params: paramsReq });
+            const { data } = await axios.get(apiUrl(`/api/partidas/${p}/estado`), { params: paramsReq });
 
             setTurnoId(data.turnoActualJugadorId ?? null);
             setGanadorId(data.ganadorId ?? null);
@@ -517,7 +517,7 @@ export default function TableroPage() {
             if (!isSpectator && !jugadorId) return;
 
             try {
-                const { data } = await axios.get(`${API_BASE}/api/partidas/sala/${params.id}/activa`);
+                const { data } = await axios.get(apiUrl(`/api/partidas/sala/${params.id}/activa`));
                 const pid = (data && (data.id ?? data.partidaId)) || null;
                 if (pid) {
                     setPartidaId(pid);
@@ -536,7 +536,7 @@ export default function TableroPage() {
         if (started && !partidaId) {
             const fetchActive = async () => {
                 try {
-                    const { data } = await axios.get(`${API_BASE}/api/partidas/sala/${params.id}/activa`);
+                    const { data } = await axios.get(apiUrl(`/api/partidas/sala/${params.id}/activa`));
                     const pid = (data && (data.id ?? data.partidaId)) || null;
                     if (pid) {
                         setPartidaId(pid);
@@ -560,7 +560,7 @@ export default function TableroPage() {
         const fetchSala = async () => {
             // Always fetch sala info to update seats
             try {
-                const { data } = await axios.get<Sala[]>(`${API_BASE}/api/sala/todas`);
+                const { data } = await axios.get<Sala[]>(apiUrl(`/api/sala/todas`));
                 const encontrada = data.find(s => String(s.id) === String(params.id));
                 if (encontrada) {
                     setSala(encontrada);
@@ -585,7 +585,7 @@ export default function TableroPage() {
         if (!params?.id) return;
 
         const client = new StompClient({
-            webSocketFactory: () => new SockJS(`${API_BASE}/ws`),
+            webSocketFactory: () => new SockJS(realtimeUrl()),
             reconnectDelay: 3000,
             onConnect: () => {
                 setWsConectado(true);
@@ -612,13 +612,13 @@ export default function TableroPage() {
                 // NEW: Subscribe to generic events (rematch, game start, seat changes)
                 client.subscribe(`/topic/sala/${params.id}/evento`, () => {
                     // Update room state (seats)
-                    axios.get<Sala[]>(`${API_BASE}/api/sala/todas`).then(({ data }) => {
+                    axios.get<Sala[]>(apiUrl(`/api/sala/todas`)).then(({ data }) => {
                         const encontrada = data.find(s => String(s.id) === String(params.id));
                         if (encontrada) setSala(encontrada);
                     }).catch(() => { });
 
                     // Always try to find the active game for this sala
-                    axios.get(`${API_BASE}/api/partidas/sala/${params.id}/activa`).then(({ data: activeData }) => {
+                    axios.get(apiUrl(`/api/partidas/sala/${params.id}/activa`)).then(({ data: activeData }) => {
                         const pid = (activeData && (activeData.id ?? activeData.partidaId)) || null;
                         if (pid) {
                             setStarted(true);
@@ -684,7 +684,7 @@ export default function TableroPage() {
         let senderName = (jugadorId && jugadoresMap[jugadorId]) || (isSpectator ? spectatorName : `Jugador ${jugadorId}`);
 
         try {
-            await axios.post(`${API_BASE}/api/chat/${params.id}`, {
+            await axios.post(apiUrl(`/api/chat/${params.id}`), {
                 sender: senderName,
                 content: chatMsg,
                 type: 'CHAT'
@@ -724,7 +724,7 @@ export default function TableroPage() {
 
     const salirSala = async () => {
         if (isSpectator) {
-            try { await axios.put(`${API_BASE}/api/sala/${params.id}/salirEspectador`); } catch { }
+            try { await axios.put(apiUrl(`/api/sala/${params.id}/salirEspectador`)); } catch { }
             router.push('/');
             return;
         }
@@ -732,11 +732,11 @@ export default function TableroPage() {
             setLoading(true);
             // If player is in a seat, liberate it first
             if (miPuesto !== 0) {
-                await axios.put(`${API_BASE}/api/sala/${params.id}/puesto/${miPuesto}/liberar`);
+                await axios.put(apiUrl(`/api/sala/${params.id}/puesto/${miPuesto}/liberar`));
             }
             // Also liberate via jugadorId for legacy cleanup
             if (jugadorId) {
-                await axios.put(`${API_BASE}/api/sala/${params.id}/liberar`, null, {
+                await axios.put(apiUrl(`/api/sala/${params.id}/liberar`), null, {
                     params: { jugadorId }
                 });
             }
@@ -759,7 +759,7 @@ export default function TableroPage() {
         }
         if (!partidaId) {
             try {
-                const { data } = await axios.get(`${API_BASE}/api/partidas/sala/${params.id}/activa`);
+                const { data } = await axios.get(apiUrl(`/api/partidas/sala/${params.id}/activa`));
                 const pid = (data && (data.id ?? data.partidaId)) || null;
                 if (pid) setPartidaId(pid);
                 else {
@@ -783,7 +783,7 @@ export default function TableroPage() {
             setLoading(true);
             const posiciones: Record<string, boolean> = {};
             placed.forEach(p => p.cells.forEach(k => posiciones[k] = true));
-            await axios.post(`${API_BASE}/api/partidas/${pid}/tablero/${jugadorId}`, posiciones);
+            await axios.post(apiUrl(`/api/partidas/${pid}/tablero/${jugadorId}`), posiciones);
             setPreparado(true);
         } catch (err: any) {
             setError('No se pudo preparar el tablero');
@@ -828,7 +828,7 @@ export default function TableroPage() {
 
         try {
             setLoading(true);
-            const { data } = await axios.post<boolean>(`${API_BASE}/api/partidas/${partidaId}/disparar`, null, {
+            const { data } = await axios.post<boolean>(apiUrl(`/api/partidas/${partidaId}/disparar`), null, {
                 params: { atacanteId: jugadorId, posicion: posicionDisparo }
             });
             setResultado(data ? '¡Acierto!' : 'Agua');
@@ -866,7 +866,7 @@ export default function TableroPage() {
     const ocuparPuesto = async (puesto: number) => {
         if (!jugadorId) return;
         try {
-            await axios.put(`${API_BASE}/api/sala/${params.id}/puesto/${puesto}/ocupar`, null, {
+            await axios.put(apiUrl(`/api/sala/${params.id}/puesto/${puesto}/ocupar`), null, {
                 params: { jugadorId }
             });
             // The event subscription will refresh the UI
@@ -877,7 +877,7 @@ export default function TableroPage() {
 
     const liberarPuesto = async (puesto: number) => {
         try {
-            await axios.put(`${API_BASE}/api/sala/${params.id}/puesto/${puesto}/liberar`);
+            await axios.put(apiUrl(`/api/sala/${params.id}/puesto/${puesto}/liberar`));
             // The event subscription will refresh the UI
         } catch (e) {
             setError('No se pudo liberar el puesto');
@@ -887,7 +887,7 @@ export default function TableroPage() {
     const solicitarRevancha = async () => {
         if (!partidaId || !jugadorId) return;
         try {
-            await axios.post(`${API_BASE}/api/partidas/${partidaId}/revancha`, null, {
+            await axios.post(apiUrl(`/api/partidas/${partidaId}/revancha`), null, {
                 params: { jugadorId }
             });
         } catch (e) {
@@ -898,7 +898,7 @@ export default function TableroPage() {
     const rechazarRevancha = async () => {
         if (!partidaId || !jugadorId) return;
         try {
-            await axios.post(`${API_BASE}/api/partidas/${partidaId}/revancha/rechazar`, null, {
+            await axios.post(apiUrl(`/api/partidas/${partidaId}/revancha/rechazar`), null, {
                 params: { jugadorId }
             });
             // Reset local game state

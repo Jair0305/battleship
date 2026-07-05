@@ -10,9 +10,37 @@ import type {
   TableSnapshot,
 } from './types'
 
-const configuredApiBase = process.env.NEXT_PUBLIC_API_BASE
-export const API_BASE =
-  configuredApiBase === undefined ? 'http://localhost:8080' : configuredApiBase.replace(/\/$/, '')
+const configuredApiBase = process.env.NEXT_PUBLIC_API_BASE?.trim()
+
+export function getApiBase() {
+  if (configuredApiBase) return configuredApiBase.replace(/\/$/, '')
+  if (typeof window !== 'undefined') {
+    const { hostname, protocol } = window.location
+    if (protocol === 'https:' || hostname !== 'localhost') return ''
+  }
+  return 'http://localhost:8080'
+}
+
+export const API_BASE = getApiBase()
+
+export function apiUrl(path: string) {
+  const base = getApiBase()
+  return base ? `${base}${path}` : path
+}
+
+export function realtimeUrl(path = '/ws') {
+  const base = getApiBase()
+  if (!base) {
+    if (typeof window === 'undefined') return path
+    return new URL(path, window.location.origin).toString()
+  }
+
+  const url = new URL(path, base)
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.protocol === 'http:') {
+    url.protocol = 'https:'
+  }
+  return url.toString()
+}
 const SESSION_KEY = 'bship:session'
 
 type ApiError = {
@@ -25,7 +53,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string |
   const sessionToken = token ?? getStoredSession()?.token
   if (sessionToken) headers.set('X-Session-Token', sessionToken)
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(apiUrl(path), {
     ...init,
     headers,
     credentials: 'include',
