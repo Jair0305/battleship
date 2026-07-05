@@ -31,7 +31,8 @@ export default function EntryScreen({ onAuthenticated }: { onAuthenticated?: (se
     }
     setLoading(true);
     try {
-      onAuthenticated?.(await login(username.trim(), password));
+      const session = await login(username.trim(), password);
+      onAuthenticated?.(session);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesion");
     } finally {
@@ -52,7 +53,8 @@ export default function EntryScreen({ onAuthenticated }: { onAuthenticated?: (se
     }
     setLoading(true);
     try {
-      onAuthenticated?.(await register(username.trim(), password, passwordConfirm));
+      const session = await register(username.trim(), password, passwordConfirm);
+      onAuthenticated?.(session);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo crear la cuenta");
     } finally {
@@ -65,7 +67,8 @@ export default function EntryScreen({ onAuthenticated }: { onAuthenticated?: (se
     setError(null);
     setLoading(true);
     try {
-      onAuthenticated?.(await createGuest(guestName.trim() || undefined));
+      const session = await createGuest(guestName.trim() || undefined);
+      onAuthenticated?.(session);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo entrar como invitado");
     } finally {
