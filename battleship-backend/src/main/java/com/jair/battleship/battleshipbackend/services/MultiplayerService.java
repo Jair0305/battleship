@@ -447,14 +447,20 @@ public class MultiplayerService {
         Optional<Partida> partida = currentPartida(mesa);
         SeatSnapshot seatA = seatSnapshot("A", mesa.getSeatA(), mesa.isReadyA());
         SeatSnapshot seatB = seatSnapshot("B", mesa.getSeatB(), mesa.isReadyB());
+        SesionJugador session = findSessionOrNull(token);
+        String mySeat = null;
+        if (isSeat(mesa.getSeatA(), session)) {
+            mySeat = "A";
+        } else if (isSeat(mesa.getSeatB(), session)) {
+            mySeat = "B";
+        }
         Long partidaId = partida.map(Partida::getId).orElse(null);
         Long turno = partida.map(Partida::getTurnoActualJugadorId).orElse(null);
         Long ganador = partida.map(p -> p.getGanador() == null ? null : p.getGanador().getId()).orElse(null);
         PrivateMatchView privateView = null;
         SpectatorMatchView spectatorView = null;
         if (partida.isPresent()) {
-            SesionJugador session = findSessionOrNull(token);
-            if (session != null && (isSeat(mesa.getSeatA(), session) || isSeat(mesa.getSeatB(), session))) {
+            if (session != null && mySeat != null) {
                 privateView = privateView(partida.get(), mesa, session);
             } else {
                 spectatorView = spectatorView(partida.get(), mesa);
@@ -468,6 +474,7 @@ public class MultiplayerService {
                 mesa.getEstado().name(),
                 seatA,
                 seatB,
+                mySeat,
                 mesa.getSpectatorSessionIds() == null ? 0 : mesa.getSpectatorSessionIds().size(),
                 partidaId,
                 turno,

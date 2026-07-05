@@ -8,6 +8,7 @@ public record TableSnapshot(
         String estado,
         SeatSnapshot seatA,
         SeatSnapshot seatB,
+        String mySeat,
         int spectators,
         Long partidaId,
         Long turnoActualJugadorId,

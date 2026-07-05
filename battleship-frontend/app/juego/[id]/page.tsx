@@ -103,7 +103,7 @@ function TableExperience({ mesaId }: { mesaId: number }) {
     },
   ]);
 
-  const mySeat = table?.privateView?.mySeat ?? null;
+  const mySeat = table?.mySeat ?? table?.privateView?.mySeat ?? null;
   const mySeatSnapshot = mySeat ? seatByCode(table, mySeat) : null;
   const opponentSeat = mySeat === "A" ? table?.seatB : mySeat === "B" ? table?.seatA : null;
   const bothSeatsOccupied = Boolean(table?.seatA.occupied && table.seatB.occupied);

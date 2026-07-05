@@ -58,6 +58,7 @@ export type TableSnapshot = {
   estado: GameState
   seatA: SeatSnapshot
   seatB: SeatSnapshot
+  mySeat: 'A' | 'B' | null
   spectators: number
   partidaId: number | null
   turnoActualJugadorId: number | null
