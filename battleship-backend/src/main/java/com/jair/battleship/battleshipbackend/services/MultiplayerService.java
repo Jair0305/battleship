@@ -786,7 +786,7 @@ public class MultiplayerService {
         Optional<Tablero> ownBoard = tableroRepository.findByJugadorIdAndPartidaId(me.getId(), partida.getId());
         Optional<Tablero> opBoard = tableroRepository.findByJugadorIdAndPartidaId(op.getId(), partida.getId());
         Map<Long, Map<String, String>> revealed = shouldReveal(partida)
-                ? revealedShips(List.of(mesa.getSeatA(), mesa.getSeatB()), partida)
+                ? revealedShips(seatedPlayers(mesa), partida)
                 : Map.of();
         return new PrivateMatchView(
                 "PLAYER",
@@ -810,17 +810,25 @@ public class MultiplayerService {
             players.put(mesa.getSeatB().getId(), mesa.getSeatB().getNombre());
         }
         Map<Long, Map<String, String>> publicShots = new LinkedHashMap<>();
-        for (Jugador jugador : List.of(mesa.getSeatA(), mesa.getSeatB())) {
-            if (jugador == null) {
-                continue;
-            }
+        for (Jugador jugador : seatedPlayers(mesa)) {
             tableroRepository.findByJugadorIdAndPartidaId(jugador.getId(), partida.getId())
                     .ifPresent(tablero -> publicShots.put(jugador.getId(), shotStatusForBoard(tablero)));
         }
         Map<Long, Map<String, String>> revealed = shouldReveal(partida)
-                ? revealedShips(List.of(mesa.getSeatA(), mesa.getSeatB()), partida)
+                ? revealedShips(seatedPlayers(mesa), partida)
                 : Map.of();
         return new SpectatorMatchView(players, publicShots, revealed, history(partida.getId()));
+    }
+
+    private List<Jugador> seatedPlayers(Mesa mesa) {
+        List<Jugador> jugadores = new ArrayList<>(2);
+        if (mesa.getSeatA() != null) {
+            jugadores.add(mesa.getSeatA());
+        }
+        if (mesa.getSeatB() != null) {
+            jugadores.add(mesa.getSeatB());
+        }
+        return jugadores;
     }
 
     private SeatSnapshot seatSnapshot(String seat, Jugador jugador, boolean ready) {

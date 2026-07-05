@@ -7,8 +7,10 @@ import com.jair.battleship.battleshipbackend.models.dto.multiplayer.ShotRequest;
 import com.jair.battleship.battleshipbackend.models.dto.multiplayer.ShotResult;
 import com.jair.battleship.battleshipbackend.models.dto.multiplayer.TableSnapshot;
 import com.jair.battleship.battleshipbackend.models.entities.Disparo;
+import com.jair.battleship.battleshipbackend.models.entities.Mesa;
 import com.jair.battleship.battleshipbackend.models.entities.Partida;
 import com.jair.battleship.battleshipbackend.models.entities.Sala;
+import com.jair.battleship.battleshipbackend.models.enums.EstadoPartida;
 import com.jair.battleship.battleshipbackend.repositories.DisparoRepository;
 import com.jair.battleship.battleshipbackend.repositories.JugadorRepository;
 import com.jair.battleship.battleshipbackend.repositories.MesaRepository;
@@ -32,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
@@ -188,6 +191,24 @@ class MultiplayerServiceClassicRulesTests {
         assertThat(shots.get(0).isAutomatic()).isTrue();
         assertThat(shots.get(0).getReason()).isEqualTo("SHOT_TIMEOUT");
         assertThat(shots.get(0).getAtacante().getId()).isEqualTo(attackerId);
+    }
+
+    @Test
+    void lobbyToleratesPartialActiveTablesFromOlderData() {
+        Sala sala = salaRepository.save(new Sala("Sala Legacy", true));
+        Mesa mesa = new Mesa();
+        mesa.setSala(sala);
+        mesa.setNombre("Mesa Parcial");
+        mesa.setEstado(EstadoPartida.PLACING_SHIPS);
+        mesa = mesaRepository.save(mesa);
+        Partida partida = new Partida();
+        partida.setSala(sala);
+        partida.setMesa(mesa);
+        partida.setEstado(EstadoPartida.PLACING_SHIPS);
+        partida.setRuleset("SEA_BATTLE_2_CLASSIC");
+        partidaRepository.save(partida);
+
+        assertThatCode(() -> service.lobby(null)).doesNotThrowAnyException();
     }
 
     private GameFixture startedGame() {
