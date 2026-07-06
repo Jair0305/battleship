@@ -52,6 +52,18 @@ function getServerClockSnapshot() {
   return 0;
 }
 
+function appendChatMessage(current: ChatMessage[], message: ChatMessage) {
+  const alreadyShown = current.some(
+    (item) =>
+      item.sender === message.sender &&
+      item.content === message.content &&
+      item.type === message.type &&
+      item.receivedAt === message.receivedAt,
+  );
+  if (alreadyShown) return current;
+  return [...current.slice(-49), message];
+}
+
 export default function TablePage() {
   const params = useParams<{ id: string }>();
   const mesaId = Number(params.id);
@@ -89,6 +101,7 @@ function AuthedTableExperience({ mesaId }: { mesaId: number }) {
   const clientNow = useSyncExternalStore(subscribeClock, getClockSnapshot, getServerClockSnapshot);
   const [lastSnapshotAt, setLastSnapshotAt] = useState(() => Date.now());
   const lastPartidaIdRef = useRef<number | null>(null);
+  const chatSendingRef = useRef(false);
 
   const applyTable = useCallback((snapshot: TableSnapshot) => {
     const isNewPlacementRound =
@@ -152,7 +165,7 @@ function AuthedTableExperience({ mesaId }: { mesaId: number }) {
       topic: `/topic/mesas/${mesaId}/chat`,
       onMessage: (message) => {
         try {
-          setChatMessages((current) => [...current.slice(-49), JSON.parse(message.body) as ChatMessage]);
+          setChatMessages((current) => appendChatMessage(current, JSON.parse(message.body) as ChatMessage));
         } catch {
           // Ignore malformed notifications; the table snapshot remains authoritative.
         }
@@ -265,16 +278,20 @@ function AuthedTableExperience({ mesaId }: { mesaId: number }) {
 
   const handleSendChat = async () => {
     const content = chatDraft.trim();
-    if (!content) return;
+    if (!content || chatSendingRef.current) return;
+    chatSendingRef.current = true;
     setBusy("chat");
     setError(null);
     try {
       const message = await api.chat(mesaId, content);
-      setChatMessages((current) => [...current.slice(-49), message]);
+      if (!connected) {
+        setChatMessages((current) => appendChatMessage(current, message));
+      }
       setChatDraft("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo enviar el mensaje");
     } finally {
+      chatSendingRef.current = false;
       setBusy(null);
     }
   };
