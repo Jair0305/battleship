@@ -89,10 +89,19 @@ class MultiplayerServiceClassicRulesTests {
     }
 
     @Test
-    void rejectsClassicShipsThatTouchAnotherShip() {
+    void rejectsClassicShipsThatTouchAnotherShipByTheirSides() {
         GameFixture game = newGame();
 
         assertThatThrownBy(() -> service.placeShips(game.mesaId(), game.alpha().token(), touchingFleet()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Los barcos no pueden tocarse");
+    }
+
+    @Test
+    void rejectsClassicShipsThatTouchAnotherShipDiagonally() {
+        GameFixture game = newGame();
+
+        assertThatThrownBy(() -> service.placeShips(game.mesaId(), game.alpha().token(), diagonallyTouchingFleet()))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Los barcos no pueden tocarse");
     }
@@ -132,6 +141,28 @@ class MultiplayerServiceClassicRulesTests {
         ShotResult miss = service.shoot(game.mesaId(), turn.token(), new ShotRequest("J10"));
         assertThat(miss.result()).isEqualTo("MISS");
         assertThat(miss.nextTurnJugadorId()).isEqualTo(turn.opponentJugadorId());
+    }
+
+    @Test
+    void sinkingShipDiscardsEveryFreeCellAroundItsPerimeter() {
+        GameFixture game = startedGame();
+        TableSnapshot table = service.table(game.mesaId(), game.alpha().token());
+        PlayerTurn turn = currentTurn(game, table.turnoActualJugadorId());
+
+        ShotResult sunk = service.shoot(game.mesaId(), turn.token(), new ShotRequest("G1"));
+
+        assertThat(sunk.result()).isEqualTo("SUNK");
+        TableSnapshot afterSunk = service.table(game.mesaId(), turn.token());
+        assertThat(afterSunk.privateView().targetShots())
+                .containsEntry("G1", "SUNK")
+                .containsEntry("F1", "MISS")
+                .containsEntry("F2", "MISS")
+                .containsEntry("G2", "MISS")
+                .containsEntry("H1", "MISS")
+                .containsEntry("H2", "MISS");
+        assertThatThrownBy(() -> service.shoot(game.mesaId(), turn.token(), new ShotRequest("F1")))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Esa coordenada ya fue atacada");
     }
 
     @Test
@@ -419,6 +450,12 @@ class MultiplayerServiceClassicRulesTests {
     private ShipPlacementRequest touchingFleet() {
         List<ShipPlacement> ships = new ArrayList<>(classicFleet().ships());
         ships.set(1, ship("cruiser_1", 3, "H", "B1", "B2", "B3"));
+        return new ShipPlacementRequest(ships);
+    }
+
+    private ShipPlacementRequest diagonallyTouchingFleet() {
+        List<ShipPlacement> ships = new ArrayList<>(classicFleet().ships());
+        ships.set(1, ship("cruiser_1", 3, "H", "B5", "B6", "B7"));
         return new ShipPlacementRequest(ships);
     }
 

@@ -231,6 +231,14 @@ input:-webkit-autofill:active {
     background: rgba(138, 199, 255, 0.13);
     color: #d7edff;
   }
+
+  .nightly-cell-placement-blocked {
+    border-color: rgba(255, 255, 255, 0.055);
+    background:
+      linear-gradient(135deg, transparent 43%, rgba(255, 255, 255, 0.07) 44%, rgba(255, 255, 255, 0.07) 56%, transparent 57%),
+      rgba(10, 10, 9, 0.72);
+    color: #5f5f58;
+  }
 }
 
 @layer utilities {

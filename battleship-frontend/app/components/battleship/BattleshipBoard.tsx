@@ -26,6 +26,7 @@ export function PlacementBoard({
   onCellLeave: () => void;
 }) {
   const previewCells = new Set(preview?.cells ?? []);
+  const blockedCells = placementBlockedCells(ships);
 
   return (
     <div>
@@ -47,6 +48,7 @@ export function PlacementBoard({
               const cell = `${row}${col}`;
               const hasShip = Boolean(ships[cell]);
               const inPreview = previewCells.has(cell);
+              const isBlocked = !hasShip && blockedCells.has(cell);
               return (
                 <button
                   key={cell}
@@ -54,9 +56,9 @@ export function PlacementBoard({
                   onClick={() => onCellClick(cell)}
                   onMouseEnter={() => onCellEnter(cell)}
                   onMouseLeave={onCellLeave}
-                  aria-label={`Colocar barco en ${cell}`}
-                  className={placementCellClassName(hasShip, inPreview, preview?.valid ?? true)}
-                  title={cell}
+                  aria-label={isBlocked ? `${cell}, zona de separacion bloqueada` : `Colocar barco en ${cell}`}
+                  className={placementCellClassName(hasShip, isBlocked, inPreview, preview?.valid ?? true)}
+                  title={isBlocked ? `${cell} - zona de separacion` : cell}
                 />
               );
             })}
@@ -151,11 +153,37 @@ function cellClassName(hasShip: boolean, shot: CellShot | undefined) {
   );
 }
 
-function placementCellClassName(hasShip: boolean, inPreview: boolean, previewValid: boolean) {
+function placementCellClassName(hasShip: boolean, isBlocked: boolean, inPreview: boolean, previewValid: boolean) {
   return cn(
     "nightly-cell md:h-10 md:w-10 cursor-crosshair",
+    !inPreview && isBlocked && "nightly-cell-placement-blocked",
     inPreview && previewValid && "border-night-success/70 bg-night-success/25",
     inPreview && !previewValid && "border-night-danger/70 bg-night-danger/25",
     !inPreview && hasShip && "nightly-cell-ship",
   );
+}
+
+function placementBlockedCells(ships: Record<string, string>) {
+  const occupied = new Set(Object.keys(ships));
+  const blocked = new Set<string>();
+
+  for (const cell of occupied) {
+    const parsed = parseBoardCell(cell);
+    if (!parsed) continue;
+    for (let row = parsed.row - 1; row <= parsed.row + 1; row += 1) {
+      for (let col = parsed.col - 1; col <= parsed.col + 1; col += 1) {
+        if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) continue;
+        const neighbor = `${String.fromCharCode(65 + row)}${col + 1}`;
+        if (!occupied.has(neighbor)) blocked.add(neighbor);
+      }
+    }
+  }
+
+  return blocked;
+}
+
+function parseBoardCell(cell: string) {
+  const match = /^([A-J])(10|[1-9])$/.exec(cell);
+  if (!match) return null;
+  return { row: match[1].charCodeAt(0) - 65, col: Number(match[2]) - 1 };
 }

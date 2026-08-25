@@ -413,6 +413,7 @@ public class MultiplayerService {
             sunkShip = sunkShipAt(tableroDefensor, position);
             if (sunkShip != null) {
                 result = "SUNK";
+                discardSunkShipPerimeter(tableroDefensor, sunkShip);
             }
         }
         boolean win = allShipsHit(tableroDefensor);
@@ -1027,6 +1028,34 @@ public class MultiplayerService {
         return ships.entrySet().stream()
                 .filter(e -> ship.equals(e.getValue()))
                 .allMatch(e -> Boolean.TRUE.equals(attacked.get(e.getKey())));
+    }
+
+    private void discardSunkShipPerimeter(Tablero tablero, String sunkShip) {
+        Map<String, String> ships = tablero.getBarcosPorCelda() == null ? Map.of() : tablero.getBarcosPorCelda();
+        Map<String, Boolean> attacked = tablero.getPosicionesAtacadas();
+        if (attacked == null) {
+            attacked = new HashMap<>();
+            tablero.setPosicionesAtacadas(attacked);
+        }
+
+        List<String> sunkCells = ships.entrySet().stream()
+                .filter(entry -> sunkShip.equals(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .toList();
+        for (String sunkCell : sunkCells) {
+            Cell parsed = parseCell(sunkCell);
+            for (int row = parsed.row() - 1; row <= parsed.row() + 1; row++) {
+                for (int col = parsed.col() - 1; col <= parsed.col() + 1; col++) {
+                    if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) {
+                        continue;
+                    }
+                    String neighbor = String.valueOf((char) ('A' + row)) + (col + 1);
+                    if (!ships.containsKey(neighbor)) {
+                        attacked.putIfAbsent(neighbor, false);
+                    }
+                }
+            }
+        }
     }
 
     private boolean allShipsHit(Tablero tablero) {
