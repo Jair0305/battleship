@@ -36,7 +36,7 @@ services:
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_H2_CONSOLE_ENABLED: "false"
-      APP_ALLOWED_ORIGIN_PATTERNS: "http://battleship.nightly.mx,http://battleship.nightly.mx:3006,https://battleship.nightly.mx,http://40.233.30.181:3006,http://localhost:3006,http://localhost:3000,http://localhost:3001,http://localhost:3002"
+      APP_ALLOWED_ORIGIN_PATTERNS: "http://battleship.nightly.mx,http://battleship.nightly.mx:3006,https://battleship.nightly.mx,http://54.204.174.207:3006,http://localhost:3006,http://localhost:3000,http://localhost:3001,http://localhost:3002"
       JAVA_OPTS: "-XX:MaxRAMPercentage=75.0"
     ports:
       - "127.0.0.1:3007:8080"
