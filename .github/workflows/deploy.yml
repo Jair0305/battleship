@@ -114,7 +114,7 @@ jobs:
       - name: Upload compose assets
         run: |
           ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" "sudo mkdir -p /opt/battleship && sudo chown ${{ secrets.DEPLOY_SSH_USER }}:${{ secrets.DEPLOY_SSH_USER }} /opt/battleship"
-          scp -i ~/.ssh/battleship_deploy_key deploy/docker-compose.yml deploy/nginx.conf deploy/host-nginx-battleship.nightly.mx.conf "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:/opt/battleship/"
+          scp -i ~/.ssh/battleship_deploy_key deploy/docker-compose.yml deploy/nginx.conf deploy/host-nginx-battleship.nightly.mx.conf deploy/reload-nginx-after-cert-renewal.sh "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:/opt/battleship/"
 
       - name: Install host nginx route
         run: |
@@ -122,6 +122,8 @@ jobs:
           set -euo pipefail
           sudo install -m 0644 /opt/battleship/host-nginx-battleship.nightly.mx.conf /etc/nginx/sites-available/battleship.nightly.mx
           sudo ln -sfn /etc/nginx/sites-available/battleship.nightly.mx /etc/nginx/sites-enabled/battleship.nightly.mx
+          sudo mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+          sudo install -m 0755 /opt/battleship/reload-nginx-after-cert-renewal.sh /etc/letsencrypt/renewal-hooks/deploy/reload-nginx
           sudo nginx -t
           sudo systemctl reload nginx
           REMOTE
