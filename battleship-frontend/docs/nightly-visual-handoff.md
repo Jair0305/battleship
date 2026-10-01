@@ -2,6 +2,9 @@
 
 ## Status
 
+The initial code-only pass below is historical. Subsequent validation and
+production deployment are recorded in [Visual Release](nightly-visual-release.md).
+
 Code-only visual iteration coordinated by Codex with Claude Code. Changes are
 intended for later review, not a tested or deployed release. No tests, builds,
 lint, type checking, React Doctor, browsers, app startup, containers, SSH or
@@ -46,7 +49,7 @@ classes, JSX and renderable outcome labels. Existing role gating and hidden
 information stay intact. Entrance transforms return to `none`, and reduced
 motion skips the animated presentation.
 
-## Still Unverified
+## Deferred At End Of Code-Only Pass
 
 Compilation, actual viewport layout/contrast, focus behavior, motion perception,
 large-board frame/input performance, reconnect, multiplayer and authentication
