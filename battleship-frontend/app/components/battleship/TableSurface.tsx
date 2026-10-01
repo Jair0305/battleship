@@ -146,8 +146,8 @@ export function TableSurface({
       )}
       <EndRoundBanner table={table} mySeat={mySeat} onRematch={onRematch} onLeave={onLeave} busy={busy} />
 
-      <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
-        <aside className="space-y-4">
+      <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="min-w-0 space-y-4">
           <Panel title="Asientos" eyebrow="Mesa">
             <div className="space-y-3">
               <SeatCard seat={table.seatA} canSit={canTakeSeat && !table.seatA.occupied} isMine={mySeat === "A"} busy={busy === "sit-A"} onSit={() => onSit("A")} />
@@ -181,7 +181,7 @@ export function TableSurface({
           </Panel>
         </aside>
 
-        <main className="space-y-4">
+        <main className="min-w-0 space-y-4">
           <StatusStrip table={table} mySeat={mySeat} opponentName={opponentSeat?.displayName ?? null} readyRemaining={readyRemaining} turnRemaining={turnRemaining} formatSeconds={formatSeconds} />
           {canPlaceShips && (
             <PlacementPanel
@@ -366,7 +366,7 @@ function PlacementPanel({
           Colocacion: {formatSeconds(placementRemaining)}
         </span>
       </div>
-      <div className="grid gap-4 xl:grid-cols-[auto_1fr]">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,484px)_minmax(0,1fr)]">
         <PlacementBoard
           ships={fleetToCells(fleet)}
           preview={placementPreview}
@@ -431,7 +431,7 @@ function BoardsSection({
 }) {
   if (!table.privateView) return <SpectatorBoards table={table} />;
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
       <Panel title="Tu tablero" eyebrow="Flota propia" tone="signal">
         <BoardGrid
           title={table.seatA.jugadorId === table.privateView.myJugadorId ? table.seatA.displayName ?? "Jugador A" : table.seatB.displayName ?? "Jugador B"}

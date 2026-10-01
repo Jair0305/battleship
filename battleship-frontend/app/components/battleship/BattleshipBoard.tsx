@@ -127,8 +127,8 @@ export function BoardGrid({
 
 function BoardFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="max-w-full overflow-x-auto pb-2">
-      <div className="nightly-board nightly-ticks grid w-max grid-cols-[28px_repeat(10,36px)] gap-1 rounded-night-sm p-2 md:grid-cols-[28px_repeat(10,40px)]">
+    <div className="min-w-0 max-w-full overflow-x-auto pb-2">
+      <div className="nightly-board nightly-ticks grid w-full min-w-[360px] max-w-[484px] grid-cols-[24px_repeat(10,minmax(0,1fr))] gap-1 rounded-night-sm p-2">
         {children}
       </div>
     </div>
@@ -137,7 +137,7 @@ function BoardFrame({ children }: { children: React.ReactNode }) {
 
 function AxisLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-9 items-center justify-center font-mono text-[0.65rem] text-night-signal/60 md:h-10">
+    <div className="flex min-h-0 items-center justify-center font-mono text-[0.65rem] text-night-signal/60">
       {children}
     </div>
   );
@@ -145,7 +145,7 @@ function AxisLabel({ children }: { children: React.ReactNode }) {
 
 function cellClassName(hasShip: boolean, shot: CellShot | undefined) {
   return cn(
-    "nightly-cell md:h-10 md:w-10",
+    "nightly-cell",
     shot === "MISS" && "nightly-cell-miss",
     shot === "HIT" && "nightly-cell-hit",
     shot === "SUNK" && "nightly-cell-sunk",
@@ -155,7 +155,7 @@ function cellClassName(hasShip: boolean, shot: CellShot | undefined) {
 
 function placementCellClassName(hasShip: boolean, isBlocked: boolean, inPreview: boolean, previewValid: boolean) {
   return cn(
-    "nightly-cell md:h-10 md:w-10 cursor-crosshair",
+    "nightly-cell cursor-crosshair",
     !inPreview && isBlocked && "nightly-cell-placement-blocked",
     inPreview && previewValid && "border-night-success/70 bg-night-success/25",
     inPreview && !previewValid && "border-night-danger/70 bg-night-danger/25",

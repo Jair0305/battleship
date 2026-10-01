@@ -171,7 +171,7 @@ export function SpectatorBoards({ table }: { table: TableSnapshot }) {
 
   const playerIds = Object.keys(spectator.players);
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
       {playerIds.map((playerId) => (
         <GamePanel key={playerId} title={spectator.players[playerId]} eyebrow="Vista de espectador" tone="signal">
           <BoardGrid

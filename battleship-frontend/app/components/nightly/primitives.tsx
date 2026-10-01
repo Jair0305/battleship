@@ -149,7 +149,7 @@ export function GamePanel({
   tone?: NightlyTone;
 }) {
   return (
-    <section className={cn("nightly-frame rounded-night p-4 md:p-5", `nightly-tone-${tone}`, toneClass(tone), className)}>
+    <section className={cn("nightly-frame min-w-0 rounded-night p-4 md:p-5", `nightly-tone-${tone}`, toneClass(tone), className)}>
       {(title || eyebrow || action) && (
         <div className="mb-4 flex min-w-0 items-start justify-between gap-3 border-b border-white/[0.07] pb-3">
           <div className="min-w-0">
