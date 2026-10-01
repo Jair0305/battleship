@@ -3,12 +3,11 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { createGuest, login, register } from "../lib/api";
-import type { SessionUser } from "../lib/types";
+import { BOARD_SIZE, FLEET, type SessionUser } from "../lib/types";
 import {
   ErrorState,
   GameBadge,
   GameButton as NightlyButton,
-  GameCard,
   GameHero,
   GamePanel,
   GameScore,
@@ -23,13 +22,38 @@ const tabs: Array<{ key: AuthMode; label: string }> = [
   { key: "guest", label: "Invitado" },
 ];
 
-const heroEyebrow = <GameBadge tone="accent">Nightly public table</GameBadge>;
-const heroTitle = <>Battle<wbr />ship protocol</>;
+// Real fleet composition grouped by hull size, derived from the shared rules.
+const fleetClasses = Array.from(
+  FLEET.reduce((groups, ship) => {
+    const current = groups.get(ship.size);
+    groups.set(ship.size, { name: current?.name ?? ship.name.replace(/\s+\d+$/, ""), size: ship.size, count: (current?.count ?? 0) + 1 });
+    return groups;
+  }, new Map<number, { name: string; size: number; count: number }>()).values(),
+).sort((a, b) => b.size - a.size);
+
+const heroEyebrow = <GameBadge tone="accent">Nightly Games / mesa publica</GameBadge>;
+const heroTitle = <>Battle<wbr />ship</>;
 const heroStats = (
-  <div className="grid max-w-2xl grid-cols-3 gap-3">
-    <GameScore label="Board" value="10x10" />
-    <GameScore label="Fleet" value="10" />
-    <GameScore label="Mode" value="Live" />
+  <div className="max-w-xl space-y-6">
+    <div className="grid grid-cols-3 gap-3">
+      <GameScore label="Tablero" value={`${BOARD_SIZE}x${BOARD_SIZE}`} />
+      <GameScore label="Flota" value={FLEET.length} tone="signal" />
+      <GameScore label="Modo" value="En vivo" tone="neutral" />
+    </div>
+    <dl className="grid gap-px overflow-hidden rounded-night-sm border border-night-signal/20 bg-white/[0.06] sm:grid-cols-2">
+      {fleetClasses.map((ship) => (
+        <div key={ship.size} className="flex items-center justify-between gap-3 bg-[#0d0e0f] px-3 py-2.5">
+          <dt className="min-w-0 truncate font-mono text-[0.65rem] uppercase tracking-[0.14em] text-night-muted">
+            {ship.name} <span className="text-night-faint">x{ship.count}</span>
+          </dt>
+          <dd className="flex gap-1" aria-label={`${ship.size} casillas`}>
+            {Array.from({ length: ship.size }, (_, index) => (
+              <span key={index} className="h-2.5 w-2.5 border border-night-signal/50 bg-night-signal/20" />
+            ))}
+          </dd>
+        </div>
+      ))}
+    </dl>
   </div>
 );
 
@@ -124,24 +148,23 @@ export default function EntryScreen({ onAuthenticated }: { onAuthenticated?: (se
     <GameHero
       eyebrow={heroEyebrow}
       title={heroTitle}
-      copy="Una mesa publica, rating competitivo y partidas clasicas 10x10 bajo una identidad visual lista para todos los juegos de Nightly."
       stats={heroStats}
     >
-      <div className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
-        <AuthPreview />
-        <GamePanel title={mode === "login" ? "Iniciar sesion" : mode === "register" ? "Registro simple" : "Entrar como invitado"} eyebrow="access node" className="nightly-scanline">
-          <div className="grid grid-cols-3 rounded-night-sm border border-white/10 bg-[#090909]/70 p-1">
+      <div className="mx-auto w-full max-w-lg lg:mr-0">
+        <GamePanel title={mode === "login" ? "Iniciar sesion" : mode === "register" ? "Registro simple" : "Entrar como invitado"} eyebrow="Acceso" className="nightly-frame-strong">
+          <div className="grid grid-cols-3 gap-1 rounded-night-sm border border-white/10 bg-[#0b0b0a] p-1" role="group" aria-label="Tipo de acceso">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
+                aria-pressed={mode === tab.key}
                 onClick={() => {
                   setMode(tab.key);
                   setError(null);
                 }}
                 className={cn(
-                  "rounded-night-sm px-3 py-2 font-mono text-xs font-semibold uppercase tracking-[0.15em] transition-all duration-200 ease-night",
-                  mode === tab.key ? "bg-night-accent text-[#111409]" : "text-night-muted hover:bg-white/[0.04] hover:text-night-text",
+                  "nightly-segment min-h-10 rounded-night-sm px-3 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em]",
+                  mode === tab.key ? "bg-night-accent text-night-accent-ink" : "text-night-muted hover:bg-white/[0.05] hover:text-night-text",
                 )}
               >
                 {tab.label}
@@ -162,38 +185,6 @@ export default function EntryScreen({ onAuthenticated }: { onAuthenticated?: (se
   );
 }
 
-function AuthPreview() {
-  const cells = Array.from({ length: 36 }, (_, index) => index);
-
-  return (
-    <GameCard className="nightly-scanline hidden min-h-[420px] overflow-hidden p-5 lg:block" tone="accent">
-      <div className="flex items-center justify-between border-b border-white/10 pb-3 font-mono text-[0.64rem] uppercase tracking-[0.2em] text-night-faint">
-        <span>asset explorer</span>
-        <span>ng-battle-01</span>
-      </div>
-      <div className="mt-8 grid grid-cols-6 gap-2">
-        {cells.map((cell) => (
-          <div
-            key={cell}
-            className={cn(
-              "aspect-square rounded-night-sm border border-white/10 bg-white/[0.03]",
-              cell % 7 === 0 && "bg-night-accent/20 border-night-accent/40",
-              cell % 11 === 0 && "translate-y-2",
-            )}
-          />
-        ))}
-      </div>
-      <div className="mt-10 space-y-3">
-        <div className="font-display text-5xl uppercase leading-none text-night-accent">&lt;play /&gt;</div>
-        <p className="max-w-xs font-mono text-xs leading-5 text-night-muted">
-          Public lobby, private boards, real-time invalidation and rematch flow.
-        </p>
-      </div>
-      <div className="absolute bottom-5 right-5 h-24 w-24 rounded-full border border-night-accent/20 bg-night-accent/10 blur-xl" />
-    </GameCard>
-  );
-}
-
 function Field({
   label,
   value,
@@ -211,7 +202,7 @@ function Field({
 }) {
   return (
     <label className="block text-sm text-night-muted">
-      <span className="font-mono text-[0.68rem] uppercase tracking-[0.18em]">{label}</span>
+      <span className="font-mono text-[0.65rem] uppercase tracking-[0.17em]">{label}</span>
       <input
         type={type}
         value={value}

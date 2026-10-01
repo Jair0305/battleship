@@ -10,6 +10,7 @@ import {
   GameStatus,
   GameOverState,
   VictoryState,
+  cn,
 } from "../nightly/primitives";
 import { BoardGrid } from "./BattleshipBoard";
 
@@ -40,11 +41,22 @@ export function SeatCard({
   onSit: () => void;
 }) {
   return (
-    <GameCard className="p-3">
+    <GameCard
+      tone={seat.seat === "A" ? "info" : "rival"}
+      className={cn("p-3", !seat.occupied && "border-dashed", isMine && (seat.seat === "A" ? "bg-night-info/[0.06]" : "bg-night-rival/[0.06]"))}
+    >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-mono text-[0.67rem] uppercase tracking-[0.18em] text-night-faint">Asiento {seat.seat}</div>
-          <div className="mt-1 truncate text-sm font-semibold text-night-text">{seat.displayName ?? "Libre"}</div>
+        <div className="flex min-w-0 items-center gap-3">
+          <span className={cn(
+            "grid h-8 w-8 shrink-0 place-items-center rounded-night-sm border font-display",
+            seat.seat === "A" ? "border-night-info/30 text-night-info" : "border-night-rival/30 text-night-rival",
+          )}>
+            {seat.seat}
+          </span>
+          <div className="min-w-0">
+            <div className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-night-faint">Asiento {seat.seat}</div>
+            <div className={cn("mt-0.5 truncate text-sm font-semibold", seat.occupied ? "text-night-text" : "text-night-faint")}>{seat.displayName ?? "Libre"}</div>
+          </div>
         </div>
         {seat.occupied && (
           <GameBadge tone={seat.ready ? "success" : isMine ? "accent" : "neutral"}>
@@ -133,10 +145,17 @@ export function EndRoundBanner({
     </>
   );
 
+  const lost = Boolean(myPlayerId && table.ganadorId && table.ganadorId !== myPlayerId);
+
   return won ? (
     <VictoryState title="Victoria" body={body} action={action} />
   ) : (
-    <GameOverState title={table.estado === "ABANDONED" ? "Partida abandonada" : "Game over"} body={body} action={action} />
+    <GameOverState
+      title={table.estado === "ABANDONED" ? "Partida abandonada" : lost ? "Derrota" : "Partida terminada"}
+      body={body}
+      action={action}
+      outcome={lost ? "loss" : "neutral"}
+    />
   );
 }
 
@@ -144,7 +163,7 @@ export function SpectatorBoards({ table }: { table: TableSnapshot }) {
   const spectator = table.spectatorView;
   if (!spectator) {
     return (
-      <GamePanel title="Mesa" eyebrow="spectator">
+      <GamePanel title="Mesa" eyebrow="Espectador">
         <EmptyState title="Vista en espera" body="Sientate para jugar o espera a que haya una partida activa para verla como espectador." />
       </GamePanel>
     );
@@ -154,7 +173,7 @@ export function SpectatorBoards({ table }: { table: TableSnapshot }) {
   return (
     <div className="grid gap-4 xl:grid-cols-2">
       {playerIds.map((playerId) => (
-        <GamePanel key={playerId} title={spectator.players[playerId]} eyebrow="spectator board">
+        <GamePanel key={playerId} title={spectator.players[playerId]} eyebrow="Vista de espectador" tone="signal">
           <BoardGrid
             title={spectator.players[playerId]}
             ships={spectator.revealedShips[playerId] ?? {}}
@@ -176,19 +195,19 @@ export function ShotHistory({ table }: { table: TableSnapshot }) {
   if (table.seatB.jugadorId) names.set(table.seatB.jugadorId, table.seatB.displayName ?? "Jugador B");
 
   return (
-    <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+    <ol className="max-h-56 divide-y divide-white/[0.07] overflow-y-auto rounded-night-sm border border-white/[0.08] bg-[#0d0d0c]">
       {history
         .slice()
         .reverse()
         .map((shot, index) => (
-          <GameCard key={`${shot.ts}-${index}`} className="flex items-center justify-between gap-3 p-3">
+          <li key={`${shot.ts}-${index}`} className={cn("flex items-center justify-between gap-3 px-3 py-2", shot.acierto && "bg-night-danger/[0.04]")}>
             <span className="min-w-0 truncate text-sm text-night-muted">
               {names.get(shot.atacanteId) ?? "Jugador"} disparo a <span className="font-mono text-night-text">{shot.posicion}</span>
               {shot.automatic ? " - automatico" : ""}
             </span>
             <GameBadge tone={shot.acierto ? "danger" : "neutral"}>{shot.resultado}</GameBadge>
-          </GameCard>
+          </li>
         ))}
-    </div>
+    </ol>
   );
 }

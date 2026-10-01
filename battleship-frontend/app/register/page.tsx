@@ -34,7 +34,7 @@ export default function RegisterPage() {
 
   return (
     <div className="mx-auto grid min-h-[calc(100dvh-180px)] max-w-md place-items-center py-10">
-      <GamePanel title="Crear cuenta" eyebrow="rating profile" className="w-full nightly-scanline">
+      <GamePanel title="Crear cuenta" eyebrow="Perfil competitivo" className="nightly-frame-strong nightly-pop w-full">
         <p className="text-sm leading-6 text-night-muted">Registro simple: usuario y dos veces contrasena. Las partidas rated usan esta cuenta.</p>
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <Field label="Usuario" value={username} onChange={setUsername} autoComplete="username" />
@@ -71,7 +71,7 @@ function Field({
 }) {
   return (
     <label className="block text-sm text-night-muted">
-      <span className="font-mono text-[0.68rem] uppercase tracking-[0.18em]">{label}</span>
+      <span className="font-mono text-[0.65rem] uppercase tracking-[0.17em]">{label}</span>
       <input
         type={type}
         className="nightly-input mt-2"

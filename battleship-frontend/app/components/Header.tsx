@@ -13,17 +13,17 @@ export default function Header() {
   const session = useSessionUser();
 
   return (
-    <GameNavbar statusText="Battleship classic 10x10">
+    <GameNavbar statusText="Clasico 10x10">
       {session ? (
         <>
           <div className="hidden items-center gap-4 sm:flex">
             <div className="text-right">
               <div className="max-w-36 truncate font-mono text-sm text-night-text">{session.displayName}</div>
-              <div className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-night-faint">
+              <div className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-night-faint">
                 {session.guest ? "Invitado" : "Registrado"}
               </div>
             </div>
-            {!session.guest && <GameScore label="Rating" value={session.rating ?? 1200} />}
+            {!session.guest && <GameScore label="Rating" value={session.rating ?? "--"} />}
           </div>
           <GameButton variant="secondary" size="sm" onClick={signOut}>
             Salir

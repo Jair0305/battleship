@@ -12,7 +12,7 @@ import {
   battleStateLabel,
   type Seat,
 } from "./TableWidgets";
-import { ErrorState, GameBadge, GameButton, GamePanel } from "../nightly/primitives";
+import { ErrorState, GameBadge, GameButton, GamePanel, type NightlyTone } from "../nightly/primitives";
 
 type FleetShip = { key: ShipKey; name: string; size: number };
 
@@ -113,30 +113,42 @@ export function TableSurface({
 }) {
   return (
     <div className="min-h-[calc(100dvh-160px)] space-y-5 py-3">
-      <div className="flex flex-col gap-3 border-b border-white/10 pb-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <button type="button" onClick={onBackToLobby} className="mb-3 font-mono text-xs uppercase tracking-[0.18em] text-night-accent transition hover:text-night-accent-strong">
+      <div className="flex flex-col gap-3 border-b border-white/[0.09] pb-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <button type="button" onClick={onBackToLobby} className="nightly-segment mb-3 rounded-night-sm font-mono text-xs uppercase tracking-[0.18em] text-night-accent hover:text-night-accent-strong">
             Volver al lobby
           </button>
-          <h1 className="font-display text-4xl uppercase leading-none text-night-text md:text-5xl">{table.nombre}</h1>
+          <h1 className="truncate font-display text-3xl uppercase leading-none text-night-text sm:text-4xl">{table.nombre}</h1>
           <p className="mt-2 font-mono text-xs uppercase tracking-[0.16em] text-night-faint">
             {table.salaNombre} / Mesa #{table.id} / {battleStateLabel[table.estado] ?? table.estado}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <GameBadge tone={connected ? "success" : "warning"}>{connected ? "Tiempo real" : "Reconectando"}</GameBadge>
+          <GameBadge tone={connected ? "success" : "warning"} className={connected ? undefined : "animate-night-pulse"}>
+            <span aria-hidden="true" className={connected ? "h-1.5 w-1.5 bg-night-success" : "h-1.5 w-1.5 bg-night-warning"} />
+            {connected ? "Tiempo real" : "Reconectando"}
+          </GameBadge>
           <GameButton variant="secondary" onClick={onRefresh}>Refrescar</GameButton>
           <GameButton variant="ghost" onClick={onLeave} disabled={busy === "leave"}>Salir</GameButton>
         </div>
       </div>
 
-      {error && <ErrorState body={error} />}
-      {shotMessage && <GameBadge tone="accent" className="w-full justify-center py-3">{shotMessage}</GameBadge>}
+      {(error || shotMessage) && (
+        <div className="nightly-enter pointer-events-none fixed inset-x-3 bottom-3 z-[60] mx-auto max-w-xl space-y-2">
+          {error && <ErrorState body={error} />}
+          {shotMessage && (
+            <div role="status" className="flex items-center justify-center gap-3 rounded-night-sm border border-night-signal/30 bg-[#0d1317] px-4 py-3 text-center font-mono text-xs uppercase tracking-[0.14em] text-night-text shadow-[0_14px_36px_rgba(0,0,0,0.5)]">
+              <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 bg-night-signal" />
+              <span className="min-w-0 break-words">{shotMessage}</span>
+            </div>
+          )}
+        </div>
+      )}
       <EndRoundBanner table={table} mySeat={mySeat} onRematch={onRematch} onLeave={onLeave} busy={busy} />
 
       <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <aside className="space-y-4">
-          <Panel title="Asientos">
+          <Panel title="Asientos" eyebrow="Mesa">
             <div className="space-y-3">
               <SeatCard seat={table.seatA} canSit={canTakeSeat && !table.seatA.occupied} isMine={mySeat === "A"} busy={busy === "sit-A"} onSit={() => onSit("A")} />
               <SeatCard seat={table.seatB} canSit={canTakeSeat && !table.seatB.occupied} isMine={mySeat === "B"} busy={busy === "sit-B"} onSit={() => onSit("B")} />
@@ -157,7 +169,7 @@ export function TableSurface({
             />
           </Panel>
 
-          <Panel title="Chat">
+          <Panel title="Chat" eyebrow="Canal de mesa">
             <ChatPanel
               messages={chatMessages}
               draft={chatDraft}
@@ -194,7 +206,7 @@ export function TableSurface({
             />
           )}
           <BoardsSection table={table} opponentSeat={opponentSeat} isMyTurn={isMyTurn} onShot={onShot} />
-          <Panel title="Historial">
+          <Panel title="Historial" eyebrow="Registro de disparos">
             <ShotHistory table={table} />
           </Panel>
         </main>
@@ -285,7 +297,7 @@ function ChatPanel({
           <div className="text-night-faint">Sin mensajes todavia</div>
         ) : (
           messages.map((message, index) => (
-            <div key={`${message.receivedAt}-${index}`} className="rounded-night-sm border border-white/10 bg-white/[0.04] px-2 py-1">
+            <div key={`${message.receivedAt}-${index}`} className="rounded-night-sm border border-l-2 border-white/[0.07] border-l-night-accent/40 bg-[#141412] px-2.5 py-1.5">
               <span className="font-mono text-night-accent">{message.sender}: </span>
               <span className="text-night-text">{message.content}</span>
             </div>
@@ -347,10 +359,10 @@ function PlacementPanel({
   formatSeconds: (seconds: number) => string;
 }) {
   return (
-    <Panel title="Colocar flota">
+    <Panel title="Colocar flota" eyebrow="Preparacion" tone="signal">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-night-sm border border-white/10 bg-[#090909]/70 px-3 py-2 text-sm">
-        <span className="text-night-muted">{unplacedCount === 0 ? "Flota completa" : `${unplacedCount} barcos pendientes`}</span>
-        <span className={placementRemaining <= 10 ? "font-mono font-semibold text-night-danger" : "font-mono text-night-accent"}>
+        <span className={unplacedCount === 0 ? "text-night-success" : "text-night-muted"}>{unplacedCount === 0 ? "Flota completa" : `${unplacedCount} barcos pendientes`}</span>
+        <span className={placementRemaining <= 10 ? "font-mono font-semibold tabular-nums text-night-danger" : "font-mono tabular-nums text-night-accent"}>
           Colocacion: {formatSeconds(placementRemaining)}
         </span>
       </div>
@@ -376,19 +388,23 @@ function PlacementPanel({
               return (
                 <div
                   key={ship.key}
-                  className={`rounded-night-sm border px-3 py-2 text-sm transition ${
-                    selected ? "border-night-accent/50 bg-night-accent/10" : placed ? "border-night-success/30 bg-night-success/10" : "border-white/10 bg-[#090909]/70"
+                  className={`nightly-row rounded-night-sm border px-3 py-2 text-sm ${
+                    selected ? "border-night-accent/50 bg-night-accent/10" : placed ? "border-night-success/30 bg-night-success/10" : "border-white/10 bg-[#090909]/70 hover:border-white/20"
                   }`}
                 >
-                  <button type="button" onClick={() => onSelectShip(ship.key)} className="flex w-full items-center justify-between gap-3 text-left">
+                  <button type="button" aria-pressed={selected} onClick={() => onSelectShip(ship.key)} className="flex w-full items-center justify-between gap-3 rounded-night-sm text-left">
                     <span className="font-medium text-night-text">{ship.name}</span>
-                    <span className="font-mono text-xs text-night-faint">{ship.size}</span>
+                    <span className="flex gap-1" aria-label={`${ship.size} casillas`}>
+                      {Array.from({ length: ship.size }, (_, index) => (
+                        <span key={index} className={`h-2 w-2 border ${placed ? "border-night-success/60 bg-night-success/30" : "border-night-signal/50 bg-night-signal/20"}`} />
+                      ))}
+                    </span>
                   </button>
                   <div className="mt-1 font-mono text-xs text-night-faint">
                     {placed ? `${placed.orientation === "H" ? "Horizontal" : "Vertical"} - ${placed.cells.join(", ")}` : "Sin colocar"}
                   </div>
                   {placed && (
-                    <button type="button" onClick={() => onRemoveShip(ship.key)} className="mt-2 font-mono text-xs uppercase tracking-[0.16em] text-night-accent transition hover:text-night-accent-strong">
+                    <button type="button" onClick={() => onRemoveShip(ship.key)} className="nightly-segment mt-2 rounded-night-sm font-mono text-xs uppercase tracking-[0.16em] text-night-accent hover:text-night-accent-strong">
                       Mover
                     </button>
                   )}
@@ -416,14 +432,19 @@ function BoardsSection({
   if (!table.privateView) return <SpectatorBoards table={table} />;
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      <Panel title="Tu tablero">
+      <Panel title="Tu tablero" eyebrow="Flota propia" tone="signal">
         <BoardGrid
           title={table.seatA.jugadorId === table.privateView.myJugadorId ? table.seatA.displayName ?? "Jugador A" : table.seatB.displayName ?? "Jugador B"}
           ships={table.privateView.ownShips}
           shots={table.privateView.ownReceivedShots}
         />
       </Panel>
-      <Panel title="Tablero rival">
+      <Panel
+        title="Tablero rival"
+        eyebrow="Radar"
+        tone={isMyTurn ? "accent" : "rival"}
+        action={isMyTurn ? <GameBadge tone="accent">Tu turno</GameBadge> : undefined}
+      >
         <BoardGrid
           title={opponentSeat?.displayName ?? "Rival"}
           ships={revealedOpponentShips(table)}
@@ -437,9 +458,21 @@ function BoardsSection({
   );
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+function Panel({
+  title,
+  eyebrow,
+  tone,
+  action,
+  children,
+}: {
+  title: string;
+  eyebrow?: string;
+  tone?: NightlyTone;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <GamePanel title={title} eyebrow="battleship module">
+    <GamePanel title={title} eyebrow={eyebrow ?? "Battleship"} tone={tone} action={action}>
       {children}
     </GamePanel>
   );

@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body className={`${geist.variable} ${geistMono.variable} ${pixel.variable} bg-night font-ui text-night-text`}>
         <GameShell nav={nightlyNav} footer={nightlyFooter}>
           {children}

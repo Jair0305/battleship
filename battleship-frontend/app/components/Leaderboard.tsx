@@ -5,7 +5,7 @@ import axios from "axios";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { apiUrl, realtimeUrl } from "../lib/api";
-import { EmptyState, GameBadge, GameCard, GamePanel } from "./nightly/primitives";
+import { EmptyState, GamePanel } from "./nightly/primitives";
 
 interface RankingItem {
   rank: number;
@@ -89,37 +89,35 @@ export default function Leaderboard() {
   const ranking = useSyncExternalStore(subscribeRanking, getRankingSnapshot, getServerRankingSnapshot);
 
   return (
-    <GamePanel title="Rating competitivo" eyebrow="leaderboard">
-      <div className="max-h-[30rem] space-y-2 overflow-y-auto pr-1">
-        {ranking.length === 0 ? (
-          <EmptyState title="Sin partidas rated" body="Los duelos entre cuentas registradas apareceran aqui." />
-        ) : (
-          ranking.map((item) => (
-            <GameCard
+    <GamePanel title="Rating competitivo" eyebrow="Clasificacion" tone="warning">
+      {ranking.length === 0 ? (
+        <EmptyState title="Sin partidas rated" body="Los duelos entre cuentas registradas apareceran aqui." />
+      ) : (
+        <ol className="max-h-[30rem] divide-y divide-white/[0.07] overflow-y-auto rounded-night-sm border border-white/[0.08] bg-[#0d0d0c]">
+          {ranking.map((item) => (
+            <li
               key={`${item.nombre}-${item.rank}`}
-              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-3"
-              tone={item.rank === 1 ? "accent" : "neutral"}
+              className="nightly-row grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 hover:bg-white/[0.025]"
             >
-              <div className={rankClassName(item.rank)}>{item.rank}</div>
+              <div className={rankClassName(item.rank)}>#{item.rank}</div>
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium text-night-text">{item.nombre}</div>
-                <div className="mt-1 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-night-faint">
-                  {item.wins ?? 0}W / {item.losses ?? 0}L
+                <div className="mt-1 font-mono text-[0.62rem] uppercase tracking-[0.14em] text-night-faint">
+                  {item.wins ?? 0}V / {item.losses ?? 0}D
                 </div>
               </div>
-              <GameBadge tone={item.rank <= 3 ? "accent" : "neutral"}>{item.puntos} rating</GameBadge>
-            </GameCard>
-          ))
-        )}
-      </div>
+              <span className="font-mono text-base tabular-nums text-night-accent">{item.puntos}</span>
+            </li>
+          ))}
+        </ol>
+      )}
     </GamePanel>
   );
 }
 
 function rankClassName(rank: number) {
-  const base = "grid h-8 w-8 place-items-center rounded-night-sm border font-mono text-xs font-bold";
-  if (rank === 1) return `${base} border-night-accent/40 bg-night-accent text-[#111409]`;
-  if (rank === 2) return `${base} border-white/20 bg-white/10 text-night-text`;
-  if (rank === 3) return `${base} border-night-warning/40 bg-night-warning/20 text-night-warning`;
-  return `${base} border-white/10 bg-white/[0.04] text-night-muted`;
+  const base = "grid h-8 w-8 place-items-center rounded-night-sm border font-mono text-xs tabular-nums";
+  if (rank === 1) return `${base} border-night-warning/40 bg-night-warning/10 text-night-warning`;
+  if (rank <= 3) return `${base} border-white/15 bg-white/[0.04] text-night-text`;
+  return `${base} border-transparent text-night-faint`;
 }

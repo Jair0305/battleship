@@ -17,13 +17,16 @@ const config: Config = {
           line: "rgba(241, 251, 134, 0.16)",
           text: "#f7f7ef",
           muted: "#a3a398",
-          faint: "#626257",
+          faint: "#7a7a6f",
           accent: "#b9f95a",
           "accent-strong": "#d7ff73",
+          "accent-ink": "#101309",
           danger: "#ff5f69",
           warning: "#f5c85c",
           success: "#8df0b0",
-          info: "#8ac7ff",
+          info: "#67d7ff",
+          rival: "#ff6ba8",
+          signal: "#8ac7ff",
         },
       },
       fontFamily: {
@@ -37,14 +40,21 @@ const config: Config = {
       },
       transitionTimingFunction: {
         night: "var(--night-ease)",
+        "night-snap": "var(--night-ease-snap)",
+      },
+      transitionDuration: {
+        "night-press": "var(--night-dur-press)",
+        "night-fast": "var(--night-dur-fast)",
+        "night-base": "var(--night-dur-base)",
       },
       boxShadow: {
         night: "var(--night-shadow)",
         "night-inner": "var(--night-inner)",
       },
       animation: {
-        "night-fade-up": "nightly-fade-up 420ms var(--night-ease) both",
-        "night-pulse": "nightly-pulse 1.4s var(--night-ease) infinite",
+        "night-fade-up": "nightly-enter var(--night-dur-enter) var(--night-ease) both",
+        "night-enter": "nightly-enter var(--night-dur-enter) var(--night-ease) both",
+        "night-pulse": "nightly-pulse 1.2s var(--night-ease) infinite",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",

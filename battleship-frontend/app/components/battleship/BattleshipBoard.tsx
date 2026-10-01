@@ -88,7 +88,7 @@ export function BoardGrid({
     <div>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="truncate font-display text-xl uppercase text-night-text">{title}</h3>
-        {disabledReason && <span className="font-mono text-xs text-night-faint">{disabledReason}</span>}
+        {disabledReason && <span className="shrink-0 font-mono text-[0.65rem] uppercase tracking-[0.12em] text-night-faint">{disabledReason}</span>}
       </div>
       <BoardFrame>
         <div />
@@ -128,7 +128,7 @@ export function BoardGrid({
 function BoardFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="max-w-full overflow-x-auto pb-2">
-      <div className="nightly-board grid w-max grid-cols-[28px_repeat(10,36px)] gap-1 rounded-night-sm p-2 md:grid-cols-[28px_repeat(10,40px)]">
+      <div className="nightly-board nightly-ticks grid w-max grid-cols-[28px_repeat(10,36px)] gap-1 rounded-night-sm p-2 md:grid-cols-[28px_repeat(10,40px)]">
         {children}
       </div>
     </div>
@@ -137,7 +137,7 @@ function BoardFrame({ children }: { children: React.ReactNode }) {
 
 function AxisLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-9 items-center justify-center font-mono text-[0.68rem] text-night-faint md:h-10">
+    <div className="flex h-9 items-center justify-center font-mono text-[0.65rem] text-night-signal/60 md:h-10">
       {children}
     </div>
   );

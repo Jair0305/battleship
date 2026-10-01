@@ -356,7 +356,7 @@ function AuthedTableExperience({ mesaId }: { mesaId: number }) {
 function ShellMessage({ title, body }: { title: string; body: string }) {
   return (
     <div className="mx-auto grid min-h-[calc(100dvh-180px)] max-w-lg place-items-center py-10">
-      <GamePanel title={title} eyebrow="system message" className="w-full text-center">
+      <GamePanel title={title} eyebrow="Mesa" tone="warning" className="nightly-frame-strong nightly-pop w-full">
         <p className="text-sm leading-6 text-night-muted">{body}</p>
       </GamePanel>
     </div>
