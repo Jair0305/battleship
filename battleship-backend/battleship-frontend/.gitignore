@@ -1,0 +1,36 @@
+# dependencias
+/node_modules
+
+# configuración de Next.js
+/.next
+/out
+
+# configuración de build
+/dist
+
+# archivos de configuración del sistema
+.DS_Store
+Thumbs.db
+
+# archivos de configuración del editor
+/.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# archivos de configuración de ambiente
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# archivos de registro
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# directorio de cache de eslint
+/.eslintcache

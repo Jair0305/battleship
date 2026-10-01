@@ -1,0 +1,13 @@
+services:
+  agora:
+    build: .
+    image: inkwall-agora:latest
+    container_name: inkwall-agora
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./Agora-0.0.1-SNAPSHOT.jar:/app/agora.jar:ro
+    environment:
+      SERVER_PORT: "8080"
+      APP_FRONTEND_URL: "https://10.0.0.166:3000"
+    restart: unless-stopped

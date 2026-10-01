@@ -31,15 +31,3 @@ build/
 
 ### VS Code ###
 .vscode/
-
-# Local databases, private settings and generated frontend caches.
-**/data/
-*.mv.db
-*.trace.db
-*.tsbuildinfo
-.env
-.env.*
-!.env.example
-!.env.*.example
-*.key
-*.pem
