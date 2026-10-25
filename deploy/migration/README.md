@@ -575,10 +575,27 @@ Todo lo anterior a esta sección que describa el corte como pendiente quedó sup
   El resultado queda en `/opt/battleship/backups/last-offhost.public.json`.
   Sigue sin haber retención automática ni borrado; custodia 1Password de la
   contraseña del repositorio es la existente del receiver.
-- El workflow `deploy.yml` sigue **deshabilitado** en GitHub y
-  `BATTLESHIP_DEPLOY_TARGET` no está definida. Habilitarlo exige antes: que
-  `main` contenga estos cambios, una prueba de despliegue con ingreso pausado y
-  decidir la pausa breve de nginx descrita arriba.
+### Primer despliegue controlado por CD (167d0da)
+
+Evidencia: [evidence/post-deploy-167d0da.json](evidence/post-deploy-167d0da.json).
+
+- PR #1 mergeado a `main` (`167d0da0905147af9e3baa3f4fb37220a97edfda`, merge con
+  `--match-head-commit`), `BATTLESHIP_DEPLOY_TARGET=phosrvr` definida y el workflow
+  `deploy.yml` **habilitado**. El push a `main` ejecutó el pipeline existente
+  (run 40242377961: builds ARM64 y AMD64 en runners alojados, publicación y deploy
+  a phosrvr) sin runner privado ni segundo pipeline.
+- Los cuatro contenedores corren ahora las imágenes `167d0da…-arm64`, con el mismo
+  volumen autoritativo `battleship_postgres_data`; nginx monta
+  `/opt/battleship/nginx.conf` (ya no `cutover/f4a06e6`). La pausa fue la del propio
+  script de despliegue. `.env`, contraseña de PostgreSQL y revocaciones se
+  conservaron: los 7 tokens previos siguen en 401.
+- `.production-active` se reconcilió atómicamente tras una prueba completa con el
+  helper actual y un receipt **nuevo** (`receipt-post-deploy-167d0da`); el receipt
+  DATA_READY histórico no se modificó. El marcador conserva `authority`,
+  `activated_utc` (adopción) y el registro previo bajo `adoption`, añade
+  `verified_deployment` y su copia anterior (`.production-active.before-167d0da`).
+- Sigue sin haber retención automática de backups. Las cuentas `migration_*` y
+  `zz_probe_*` de las pruebas permanecen en la base real.
 
 ## Pendientes de cierre
 

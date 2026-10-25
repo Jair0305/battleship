@@ -1,0 +1,22 @@
+{
+  "stage": "post-deploy-verified",
+  "date": "2026-10-25",
+  "main_sha": "167d0da0905147af9e3baa3f4fb37220a97edfda",
+  "ci_run": 40242377961,
+  "workflow": {"build_arm64": "success", "build_amd64": "success", "deploy_phosrvr": "success", "variable": "BATTLESHIP_DEPLOY_TARGET=phosrvr"},
+  "published_arm64_digests": {
+    "backend": "ghcr.io/jair0305/battleship-backend@sha256:8327d6697992f8c060a3c2e54ef43ff115f6a28ed0ec9c56a14e606b32055b92",
+    "frontend": "ghcr.io/jair0305/battleship-frontend@sha256:5c9975de5aecbbddac09b0e6e5e86b141e0d0613466f1343bdb7afd8b71ac22d",
+    "postgres": "ghcr.io/jair0305/battleship-postgres@sha256:33c23d399b66c26245d344261c8cef2622664ac59a449987c4e407373230cc90",
+    "nginx": "ghcr.io/jair0305/battleship-nginx@sha256:3df095f0428c5145b821dc8444479b52f6f23efbf917e8ba1a6b0f42f5340d52"
+  },
+  "digest_source": "Publish tested images step of the run; identical to the host RepoDigests and running image IDs",
+  "authority": {"host": "phosrvr", "volume": "battleship_postgres_data"},
+  "nginx_mount": "/opt/battleship/nginx.conf",
+  "receipt": {"name": "receipt-post-deploy-167d0da.public.json", "sha256": "5874702a2d68ef51372fed27fd628ff6005d8e4829f5d3f3a7904f728f3da719", "historical_data_ready_receipt_modified": false},
+  "contract_check": "activate-production.py without --apply: environment, containers, images, authority volume, fresh backup, throwaway restore with identical fingerprints (882 rows) - PASS",
+  "marker": {"before_sha256": "54ad9429a8f61da9a8f1b8d5767b9f582ff1f24039eaf754c188ce7edfdccf7a", "after_sha256": "d9079c71d15289eddb7a1a67a2d9fe4c1fcf258d7dc59378a9fc07da5024dcfd", "owner_mode": "ubuntu 0600", "preserved": ["authority", "activated_utc", "adoption record"], "added": ["verified_deployment"]},
+  "public_validation": {"websocket_ranked": "7/7", "sockjs_polling_ranked": "7/7", "previous_tokens_rejected": "7/7", "probe_login_after_deploy": 200, "lobby_exposes_tokens": false, "legacy_and_sensitive_paths": "404"},
+  "backups": {"daily": "daily-20261025T230308Z (881 rows)", "offhost_snapshot": "1205e5352632d557829e8fca086f58aaefd76981a6ded3c2fc1998f41e09b86b", "pre_deploy": "pre-deploy-20261025T230141Z-167d0da"},
+  "source_nightly_int": "503, backend stopped, not reopened"
+}
