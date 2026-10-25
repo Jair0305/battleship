@@ -1,0 +1,31 @@
+{
+  "status": "prepared-and-validated-no-install-no-load",
+  "utc": "20261025T044636Z",
+  "domain": "battleship.nightly.mx",
+  "upstream": "127.0.0.1:3006",
+  "public_leaf_sha256": "e83f60fdec9d53898b2a09a03295a7824eaa7f794d1070811bf440d8905951f3",
+  "candidate_json_sha256": "5553b6dd2e20600b3ba67c4ef225aab51248f1341e7e06e0740bb73f16053ae6",
+  "baseline_json_sha256": "11276f9769071e122ac5683e98b99ff5f7e8bda325e845042ed693976d118c71",
+  "baseline_files": {
+    "/opt/pixel-office-media/rendered/Caddyfile": "864dc8f8630db2772d79b2ae2dd9c1d8a8eaa8ddfd8ed3b75c03380592d82ea2",
+    "/opt/pixel-office-media/templates/Caddyfile": "c1702df84fbb7a5d8faaab68932c1f1c9bdcf5332c3844119c1c664dfb33a718",
+    "/opt/pixel-office-media/render.sh": "de092debb5f82d3b59a1f40adba09315c7669e4b2b89f1854190f91cea8f1661"
+  },
+  "baseline_leaves": {},
+  "neighbor_probes": {
+    "rtc.pixel-office.app": 200,
+    "rtc.nightlysoftware.com": 200,
+    "turn.pixel-office.app": 404,
+    "turn.nightlysoftware.com": 404
+  },
+  "neighbor_routes_unchanged": true,
+  "protected_containers_unchanged": 35,
+  "full_configuration_delta_verified": true,
+  "persistent_import_verified": true,
+  "tls_root_only_verified": true,
+  "preparer_sha256": "ccbfa4b574e8b9ef5cc4f6ac7c5fcc238d7949a29f96bf4332b4a9786ffb5513",
+  "packet_directory": "/opt/battleship/proxy-packets/20261025T044636Z",
+  "staging_directory": "/opt/pixel-office-media/data/caddy-config/battleship-candidates/20261025T044636Z",
+  "runtime_reload_performed": false,
+  "dns_changed": false
+}

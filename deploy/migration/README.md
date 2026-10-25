@@ -16,6 +16,12 @@ No se ha autorizado ni ejecutado el corte.**
 | PostgreSQL | `16.15` | `16.15`, mismo índice OCI por digest |
 | Nginx | `1.27.5` | Mismo índice OCI por digest |
 
+Revalidación de producción a las 04:40:26 UTC: los cuatro contenedores originales
+siguen ejecutándose con esas referencias; cero partidas activas y cero deadlines
+pendientes. A las 04:40:32 UTC, ningún contenedor Battleship está ejecutándose en
+phosrvr; no existen su hoja pública ni el marcador `.production-active`.
+Estas comprobaciones se repetirán inmediatamente antes de cualquier corte.
+
 Imágenes ARM64 locales verificadas en phosrvr:
 
 - `battleship-frontend:af4f477-arm64`: `sha256:d86de1f0f0979a05f689add4f37ebc74f2c83aaaa2122490dd6f98eb2573660c`.
@@ -52,8 +58,8 @@ Archivo de recuperación de ambas imágenes ARM64 en phosrvr:
 | Integraciones técnicas | Cloudflare, GHCR y GitHub Actions del repo `Jair0305/battleship` |
 | Secretos CI anteriores | `DEPLOY_SSH_HOST/USER/KEY`, `POSTGRES_PASSWORD` y un `MSSQL_SA_PASSWORD` legacy. Se conservan; no se deduce que una clave compartida sea eliminable |
 
-No se operaron Alloy, observabilidad, Hermes/correos, POM ni los runners Cleanly o
-Pixel Office. Otros chats están haciendo cambios simultáneos; las diferencias de
+No se detuvieron ni reconfiguraron Alloy, observabilidad, Hermes/correos, las rutas
+POM ni los runners Cleanly o Pixel Office. Otros chats hacen cambios simultáneos; las diferencias de
 su inventario global no deben atribuirse a esta migración.
 
 ## Destino y coordinación
@@ -69,20 +75,79 @@ RAM disponibles al empezar. La reserva está en
 - Moonlight reserva 3334/3335/9443, sin conflicto.
 - Límites de memoria/CPU por servicio en `docker-compose.phosrvr.yml`; builder
   exclusivo `battleship-migration`, con 4 GiB y 1.5 CPU como máximo.
+- Cualquier build pesado posterior debe tomar `/run/lock/nightly-phosrvr-build.lock`.
+  Se reutilizan las imágenes verificadas; el builder y los ensayos están detenidos.
 - La copia de prueba usa **`battleship_postgres_preflight_20261025`**. El volumen
   de producción del destino se creará con el respaldo FINAL después de aprobar.
 
-`battleship.caddy` contiene únicamente la ruta propuesta
-`battleship.nightly.mx -> 127.0.0.1:3006`. El responsable del proxy compartido debe
-acordar su import persistente, el bloqueo común y la recarga validada; no basta
-editar el archivo generado de POM. No se crearon imports, locks globales ni se
-recargó `pom-caddy`. Hasta acordarlo no se puede dar por lista la ruta pública.
+`battleship.caddy` contiene la ruta con TLS administrado. La hoja bootstrap
+`battleship.bootstrap.caddy` usa el certificado actual exclusivo del dominio hasta
+confirmar DNS y emitir su certificado administrado. Ambas apuntan únicamente a
+`127.0.0.1:3006`. Cleanly confirmó su rol como instalador coordinado del ingress.
+Ya instaló la foundation VACÍA, sin reload, con import persistente
+`/config/nightly-sites/*.caddy` y lock `/run/lock/nightly-public-proxy.lock`.
+No se reaplicaron foundation, renderer patches ni `render.sh`.
 
-Cloudflare está desconectado en Chrome. Cuenta esperada por el contexto:
-`c6c06b3b8b2262a874ad710ccaf4ec8e`, zona `nightly.mx`; **no confirmadas en la sesión
-actual**. Deben comprobarse visualmente cuenta, zona, registro, proxy y TTL antes
-de cambiar algo. La resolución pública muestra direcciones del proxy Cloudflare;
-sus respuestas AAAA no demuestran que exista un registro AAAA de origen.
+Paquete preparado y validado bajo el lock a las 04:46:36 UTC:
+
+- `/opt/battleship/proxy-packets/20261025T044636Z/battleship.caddy`.
+- Hoja SHA256 `e83f60fdec9d53898b2a09a03295a7824eaa7f794d1070811bf440d8905951f3`.
+- Candidato JSON SHA256 `5553b6dd2e20600b3ba67c4ef225aab51248f1341e7e06e0740bb73f16053ae6`.
+- Baseline activo `11276f9769071e122ac5683e98b99ff5f7e8bda325e845042ed693976d118c71`,
+  coincidente con el recibo foundation de Cleanly. Glob público vacío.
+- `caddy adapt` y `caddy validate` pasaron. Las rutas existentes, sus políticas
+  TLS, listeners y loggers mantienen su comportamiento. Pruebas RTC/TURN
+  200/200/404/404 antes y después; 35 contenedores protegidos sin cambios.
+- Certificado bootstrap en `/config/battleship-tls`, claves root-only fuera del
+  glob público; staging en `/config/battleship-candidates/20261025T044636Z`.
+- Recibo versionado: `evidence/proxy-preparation-20261025.json`.
+- **Sin hoja pública instalada, sin load/reload y sin cambio DNS.** Cleanly recibió
+  paquete/hash/baseline para instalar después de aprobación propia y nueva
+  comprobación de drift bajo lock, preservando hojas de otros proyectos.
+
+El preparador compara el JSON completo, conservando el orden de las listas y
+permitiendo únicamente la ruta, certificado, política SNI y exclusión de logging
+exactos de Battleship. Rechaza cambios en catch-all, rutas sin host, logging
+global y automatización TLS. Exige el import persistente activo al nivel superior
+en template/rendered (rechaza snippets sin uso o imports dentro de un sitio) y
+que el archivo montado coincida; el candidato conserva las hojas actuales y
+añade su import de ensayo en el mismo lugar y alcance del import persistente.
+Por seguridad, rechaza heredocs antes del import: una plantilla con esa sintaxis
+necesita revisión específica, ya que su contenido puede simular llaves/imports.
+Antes de reutilizar TLS comprueba propietario root:root, directorio 0700,
+archivos regulares 0600 y ausencia de enlaces simbólicos o hardlinks.
+
+Las 18 pruebas de `test_prepare_public_proxy.py` pasaron como root en phosrvr,
+incluidas las reproducciones negativas de los hallazgos de las revisiones.
+En Windows pasan las 16 pruebas de configuración/import; las dos de permisos
+Linux se omiten explícitamente. Ejecutar con
+`python3 -m unittest discover -s /opt/battleship -p test_prepare_public_proxy.py`
+después de copiar ambos scripts al directorio privado. El ensayo real adicional
+usó `python3 /opt/battleship/prepare-public-proxy.py`, sin instalar ni cargar.
+
+La igualdad de configuración y los probes anteriores no demuestran continuidad
+de conexiones durante una futura recarga. Los proxies RTC actuales no configuran
+`stream_close_delay`; Caddy documenta que un reload cierra por defecto los
+[WebSockets existentes](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy#streaming).
+Antes de cada recarga, Cleanly debe coordinar una ventana sin sesiones RTC que
+puedan verse afectadas, o un mecanismo autorizado por su dueño. No añadir
+opciones a rutas POM ni interpretar la aprobación de Battleship como permiso
+para interrumpir POM. Si no se cumple esa condición, no recargar ni congelar
+el origen. Esto también aplica al paso posterior de TLS administrado.
+
+El usuario informa que Chrome está autenticado. La herramienta no puede observar
+sus pestañas porque su runtime intenta cargar `browser/26.1016.62342/scripts/
+browser-service.mjs`, versión que ya no existe después de actualizar el plugin.
+Chrome está ejecutándose y su manifest de native-host pasó la comprobación
+soportada. **No se interpreta este fallo como sesión cerrada ni se pide otro login.**
+No se reparó el native-host, no se copiaron módulos y no se extrajeron cookies.
+La credencial CLI existente de Wrangler está vencida y no autorizó lectura de
+zona; tampoco incluye permiso de edición DNS. No se reutilizó ni amplió su acceso.
+
+Cuenta esperada `c6c06b3b8b2262a874ad710ccaf4ec8e`, zona `nightly.mx`: **todavía
+no confirmadas en la sesión actual**. Verificar cuenta, zona, registro, proxy,
+TTL y restricciones antes de modificar. Las respuestas AAAA públicas del proxy
+Cloudflare no demuestran que exista un registro AAAA de origen.
 
 ## Respaldos y pruebas de recuperación
 
@@ -196,11 +261,14 @@ condiciones específicas de explotación; el resultado de audit no demuestra que
 Battleship haya sido explotado.
 
 No se ejecutó `npm audit fix`, no se cambiaron dependencias, no se añadió una
-allowlist y no se debilitó el umbral del workflow. Resolver los hallazgos exige
-un trabajo de actualización autorizado por separado: el alcance actual exige
-conservar versiones. **El PR permanece borrador y CI bloqueado; no está listo
-para merge ni corte.** La resolución de este bloqueo se añade a las condiciones
-previas, además de Cloudflare, proxy compartido y aprobación del corte.
+allowlist y no se debilitó el umbral del workflow. El usuario reiteró conservar
+las versiones y mover el servicio tal como está. Se mantiene esa decisión:
+**CI sigue bloqueando nuevos builds/publicaciones/despliegues automáticos.**
+Resolver los hallazgos requiere un trabajo separado de actualización autorizado;
+no se convierte esta migración en ese trabajo. El PR sigue borrador y sin merge.
+Una eventual migración manual de los artefactos existentes debe aprobarse
+explícitamente, dejando visible esta limitación de CI y sin presentar el gate
+como aprobado. Cloudflare, ingress y aprobación de corte siguen pendientes.
 
 Para comprobar los pasos que no llegó a ejecutar CI después del fallo de audit,
 se ejecutaron `npm ci`, `npm run lint`, `npm run build` y
@@ -220,12 +288,15 @@ versiones anteriores verificadas, no imágenes de un commit nuevo de infraestruc
 
 Condiciones previas pendientes:
 
-1. Login y confirmación de cuenta/zona Cloudflare, inventario exacto de TODOS los
+1. Recuperación de la herramienta de Chrome o acceso API válido, confirmación de
+   cuenta/zona Cloudflare e inventario exacto de TODOS los
    registros del subdominio y sus valores anteriores, proxy/TTL/restricciones.
 2. Responsable del proxy confirma mecanismo persistente y lock compartido;
    valida nueva configuración completa preservando todas las rutas existentes.
-   Resolver TLS para este dominio antes de habilitar tráfico al destino.
-3. Commit revisado, CI pertinente aprobado; respaldo e imágenes ARM64 disponibles.
+   Resolver TLS para este dominio y continuidad de las sesiones RTC vecinas
+   durante la recarga antes de cerrar ingreso o habilitar tráfico al destino.
+3. Commit y paquete revisados; respaldo e imágenes ARM64 existentes disponibles.
+   Registrar que audit bloquea CI automático. No omitirlo ni cambiar versiones.
 4. Confirmación explícita del usuario para este corte.
 
 Secuencia después de confirmar:
@@ -248,14 +319,20 @@ Secuencia después de confirmar:
    sin publicar tokens. Probar ingreso, API/WS y TLS del dominio por la ruta
    acordada. No ejecutar smoke de escritura contra datos reales sin marcar las
    cuentas/mesa de prueba y dejar constancia.
-7. El responsable integra exclusivamente la ruta acordada del dominio. Cambiar
+7. Cleanly instala exclusivamente la hoja bootstrap revisada, tras comprobar drift
+   y vecinos bajo el lock compartido, con recarga acordada. Cambiar
    SOLO el registro de Battleship al origen `129.146.117.87`, manteniendo proxy,
    TTL y restricciones. No tocar apex, www, correo ni otros subdominios.
-8. Validar con dos sesiones y espectador por HTTPS público, incluyendo WS y una
+8. Emitir y comprobar TLS administrado de este dominio después de propagar DNS;
+   sustituir solo su hoja bootstrap por `battleship.caddy` bajo el mismo protocolo,
+   conservando el certificado anterior hasta validar renovación automática.
+   Validar con dos sesiones y espectador por HTTPS público, incluyendo WS y una
    partida de prueba identificada. Confirmar acceso a datos anteriores, reinicios
    y persistencia. Origen permanece en 503 para clientes/edges rezagados: nunca
    permite escrituras concurrentes en su base antigua.
-9. Crear `.production-active` y activar `BATTLESHIP_DEPLOY_TARGET=phosrvr`.
+9. Crear `.production-active` y configurar el destino CI como phosrvr sin saltar
+   audit. Impedir que el workflow antiguo vuelva a desplegar en nightly-int;
+   mientras CI esté bloqueado no presentar despliegue automático como validado.
    Habilitar backup exclusivo diario; verificar su primer resultado. Reanudar CI
    solo hacia phosrvr. Mantener contenedores/volumen/config/certificados/backups
    originales y acordar duración de la ventana de rollback antes de retirarlos.
@@ -290,7 +367,8 @@ de los contenedores originales de Battleship permite reabrir sin tocar datos.
 
 ## Pendientes de cierre
 
-- Confirmación de Cloudflare, proxy compartido, corte y pruebas públicas finales.
+- Restablecer acceso técnico a Cloudflare, confirmar cuenta/zona y autorizar el
+  corte; instalar la hoja mediante Cleanly y verificar producción públicamente.
 - Resolver el bloqueo de auditoría de dependencias con autorización separada y
   conservar evidencia de CI aprobado del commit de infraestructura.
 - Acordar ventana de rollback, retención y respaldo automático off-host.

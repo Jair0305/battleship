@@ -43,3 +43,4 @@ build/
 !.env.*.example
 *.key
 *.pem
+__pycache__/
