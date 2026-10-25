@@ -172,6 +172,45 @@ temporizadores duplicados sobre el clon. Los datos reales vendrán del dump fina
 
 Documentación de runners: https://docs.github.com/en/actions/reference/runners/github-hosted-runners
 
+### Bloqueo de CI identificado el 2026-10-25
+
+El [run de effabca](https://github.com/Jair0305/battleship/actions/runs/40155730640)
+pasó la instalación de Temurin/Node y las pruebas del backend en ARM64. Falló en
+`npm audit --audit-level=moderate`: 7 vulnerabilidades reportadas (3 moderadas,
+3 altas y 1 crítica). El despliegue fue omitido; no publicó imágenes ni ejecutó
+cambios en producción.
+
+Se comprobó con `git diff --exit-code af4f477 HEAD --
+battleship-frontend/package.json battleship-frontend/package-lock.json` que los
+manifests y el lockfile coinciden con la versión frontend de producción. Son
+hallazgos sobre las dependencias conservadas, no una actualización introducida
+por esta migración.
+
+La auditoría señala `next`, `follow-redirects`, `source-map-js`, `zod` y la cadena
+`postcss-selector-parser` / `postcss-nested` / `tailwindcss`. Next 16.3.8 está en
+el rango publicado por los avisos
+[GHSA-2464-fhr4-w9xw](https://github.com/advisories/GHSA-2464-fhr4-w9xw) y
+[GHSA-673q-mjm6-r5xr](https://github.com/advisories/GHSA-673q-mjm6-r5xr), publicados
+después de la liberación visual y corregidos en Next 16.4.1. Estos avisos tienen
+condiciones específicas de explotación; el resultado de audit no demuestra que
+Battleship haya sido explotado.
+
+No se ejecutó `npm audit fix`, no se cambiaron dependencias, no se añadió una
+allowlist y no se debilitó el umbral del workflow. Resolver los hallazgos exige
+un trabajo de actualización autorizado por separado: el alcance actual exige
+conservar versiones. **El PR permanece borrador y CI bloqueado; no está listo
+para merge ni corte.** La resolución de este bloqueo se añade a las condiciones
+previas, además de Cloudflare, proxy compartido y aprobación del corte.
+
+Para comprobar los pasos que no llegó a ejecutar CI después del fallo de audit,
+se ejecutaron `npm ci`, `npm run lint`, `npm run build` y
+`npx tsc --noEmit --incremental false` sobre el archivo limpio de `af4f477`, en
+un contenedor ARM64 con Node 22.23.1, red exclusiva de Battleship y límites de
+1.5 CPU / 4 GiB. Todos pasaron; el contenedor terminó con código 0 y sin OOM.
+Evidencia en phosrvr: `/opt/battleship/build/ci-validation-effabca.log`, contenedor
+detenido `battleship-ci-validation-effabca`. Esto no sustituye ni anula el fallo
+de seguridad del workflow.
+
 ## Corte propuesto: REQUIERE CONFIRMACIÓN DEL USUARIO
 
 Interrupción estimada: **5–10 minutos** para escrituras y reconexión de sesiones;
@@ -252,7 +291,8 @@ de los contenedores originales de Battleship permite reabrir sin tocar datos.
 ## Pendientes de cierre
 
 - Confirmación de Cloudflare, proxy compartido, corte y pruebas públicas finales.
-- Ejecutar y conservar evidencia de CI del commit de infraestructura.
+- Resolver el bloqueo de auditoría de dependencias con autorización separada y
+  conservar evidencia de CI aprobado del commit de infraestructura.
 - Acordar ventana de rollback, retención y respaldo automático off-host.
 - Después de esa ventana, retirar únicamente recursos/secretos/claves/rutas
   demostrados exclusivos de Battleship. No borrar nada durante esta preparación.
