@@ -1,3 +1,4 @@
+ARG JAVA_RUNTIME_IMAGE=eclipse-temurin:21-jre-jammy
 FROM eclipse-temurin:21-jdk-jammy AS build
 
 WORKDIR /workspace
@@ -8,7 +9,7 @@ COPY src src
 
 RUN chmod +x mvnw && ./mvnw -q -DskipTests package
 
-FROM eclipse-temurin:21-jre-jammy
+FROM ${JAVA_RUNTIME_IMAGE}
 
 WORKDIR /app
 

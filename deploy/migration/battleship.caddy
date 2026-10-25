@@ -1,0 +1,5 @@
+# Proposed domain-only route; shared proxy owner integrates it under their lock.
+# Do not replace POM's generated Caddyfile or change its global options.
+battleship.nightly.mx {
+    reverse_proxy 127.0.0.1:3006
+}

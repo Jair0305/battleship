@@ -4,11 +4,15 @@ on:
   push:
     branches:
       - main
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write
+
+concurrency:
+  group: battleship-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   BACKEND_IMAGE: ghcr.io/jair0305/battleship-backend
@@ -17,7 +21,10 @@ env:
 jobs:
   build-and-push:
     name: Build, test and push images
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout
@@ -27,7 +34,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "21.0.12+8"
 
       - name: Test backend
         working-directory: battleship-backend
@@ -38,7 +45,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "22.23.1"
           cache: npm
           cache-dependency-path: battleship-frontend/package-lock.json
 
@@ -55,6 +62,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -66,36 +74,37 @@ jobs:
         with:
           context: ./battleship-backend
           file: ./battleship-backend/Dockerfile
-          push: true
-          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          platforms: linux/arm64
           tags: |
-            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}-arm64
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            JAVA_RUNTIME_IMAGE=eclipse-temurin@sha256:9b33cd477f0d297008960ca6b81bdcc86915e7e82676653b615173899319d995
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./battleship-frontend
           file: ./battleship-frontend/Dockerfile
-          push: true
-          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          platforms: linux/arm64
           build-args: |
             NEXT_PUBLIC_API_BASE=
+            NODE_IMAGE=node@sha256:d51cff3fa44ab8a368ae8708ae974480165be1b699b19527b7c0d2523433b271
           tags: |
-            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}-arm64
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
 
   deploy:
-    name: Deploy to nightly-int
+    name: Deploy to phosrvr
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.BATTLESHIP_DEPLOY_TARGET == 'phosrvr'
     permissions:
       contents: read
       packages: read
@@ -105,53 +114,50 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.PHOSRVR_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PHOSRVR_SSH_KNOWN_HOSTS }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/battleship_deploy_key
-          chmod 600 ~/.ssh/battleship_deploy_key
-          ssh-keyscan -H "${{ secrets.DEPLOY_SSH_HOST }}" >> ~/.ssh/known_hosts
+          install -d -m 700 ~/.ssh
+          umask 077
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/battleship_deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Verify migration activation
+        env:
+          SSH_HOST: ${{ secrets.PHOSRVR_SSH_HOST }}
+          SSH_USER: ${{ secrets.PHOSRVR_SSH_USER }}
+        run: |
+          test "$SSH_HOST" = "129.146.117.87"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i ~/.ssh/battleship_deploy_key "$SSH_USER@$SSH_HOST" 'test "$(uname -m)" = aarch64 && test -f /opt/battleship/.production-active'
 
       - name: Upload compose assets
+        env:
+          SSH_HOST: ${{ secrets.PHOSRVR_SSH_HOST }}
+          SSH_USER: ${{ secrets.PHOSRVR_SSH_USER }}
         run: |
-          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" "sudo mkdir -p /opt/battleship && sudo chown ${{ secrets.DEPLOY_SSH_USER }}:${{ secrets.DEPLOY_SSH_USER }} /opt/battleship"
-          scp -i ~/.ssh/battleship_deploy_key deploy/docker-compose.yml deploy/nginx.conf deploy/host-nginx-battleship.nightly.mx.conf deploy/reload-nginx-after-cert-renewal.sh "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:/opt/battleship/"
-
-      - name: Install host nginx route
-        run: |
-          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" <<'REMOTE'
-          set -euo pipefail
-          sudo install -m 0644 /opt/battleship/host-nginx-battleship.nightly.mx.conf /etc/nginx/sites-available/battleship.nightly.mx
-          sudo ln -sfn /etc/nginx/sites-available/battleship.nightly.mx /etc/nginx/sites-enabled/battleship.nightly.mx
-          sudo mkdir -p /etc/letsencrypt/renewal-hooks/deploy
-          sudo install -m 0755 /opt/battleship/reload-nginx-after-cert-renewal.sh /etc/letsencrypt/renewal-hooks/deploy/reload-nginx
-          sudo nginx -t
-          sudo systemctl reload nginx
-          REMOTE
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/battleship_deploy_key "$SSH_USER@$SSH_HOST" 'mkdir -p /opt/battleship/incoming/${{ github.sha }}'
+          scp -o StrictHostKeyChecking=yes -i ~/.ssh/battleship_deploy_key deploy/docker-compose.phosrvr.yml deploy/nginx.conf deploy/migration/deploy-phosrvr.sh deploy/migration/consistent-backup.py deploy/migration/database-fingerprint.sql "$SSH_USER@$SSH_HOST:/opt/battleship/incoming/${{ github.sha }}/"
 
       - name: Pull and restart Battleship stack
+        env:
+          SSH_HOST: ${{ secrets.PHOSRVR_SSH_HOST }}
+          SSH_USER: ${{ secrets.PHOSRVR_SSH_USER }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" <<'REMOTE'
-          set -euo pipefail
-          cd /opt/battleship
-          cat > .env <<'ENV'
-          BACKEND_IMAGE=${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-          FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          ENV
-          printf '%s\n' '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
-          docker compose --env-file .env -f docker-compose.yml pull
-          docker compose --env-file .env -f docker-compose.yml up -d
-          docker compose --env-file .env -f docker-compose.yml ps
-          REMOTE
+          printf '%s' "$REGISTRY_TOKEN" | ssh -o StrictHostKeyChecking=yes -i ~/.ssh/battleship_deploy_key "$SSH_USER@$SSH_HOST" "bash /opt/battleship/incoming/${{ github.sha }}/deploy-phosrvr.sh '${{ github.sha }}' '${{ github.actor }}'"
 
       - name: Verify deployed service
+        env:
+          SSH_HOST: ${{ secrets.PHOSRVR_SSH_HOST }}
+          SSH_USER: ${{ secrets.PHOSRVR_SSH_USER }}
         run: |
-          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" <<'REMOTE'
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/battleship_deploy_key "$SSH_USER@$SSH_HOST" <<'REMOTE'
           set -uo pipefail
           for attempt in $(seq 1 120); do
-            curl -fsS http://127.0.0.1:3006/api/lobby >/tmp/battleship-lobby.json
+            curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:3006/api/lobby >/dev/null
             api_status=$?
-            curl -fsS http://127.0.0.1:3006/ >/tmp/battleship-home.html
+            curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:3006/ >/dev/null
             home_status=$?
             if [ "$api_status" -eq 0 ] && [ "$home_status" -eq 0 ]; then
               exit 0
@@ -159,8 +165,6 @@ jobs:
             sleep 3
           done
           cd /opt/battleship
-          docker compose --env-file .env -f docker-compose.yml ps
-          docker logs --tail=120 battleship-backend || true
-          docker logs --tail=120 battleship-nginx || true
+          docker compose --env-file .env -f docker-compose.phosrvr.yml ps
           exit 1
           REMOTE

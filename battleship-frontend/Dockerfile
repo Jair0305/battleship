@@ -1,4 +1,5 @@
-FROM node:22-alpine AS deps
+ARG NODE_IMAGE=node:22-alpine
+FROM ${NODE_IMAGE} AS deps
 
 WORKDIR /app
 
@@ -14,7 +15,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY . .
 RUN npm run build && npm prune --omit=dev
 
-FROM node:22-alpine AS runner
+FROM ${NODE_IMAGE} AS runner
 
 WORKDIR /app
 

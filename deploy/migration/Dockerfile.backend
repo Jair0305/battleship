@@ -1,0 +1,10 @@
+# Repackage the exact running JAR; do not re-resolve Maven dependencies.
+ARG JAVA_IMAGE=eclipse-temurin@sha256:9b33cd477f0d297008960ca6b81bdcc86915e7e82676653b615173899319d995
+FROM ${JAVA_IMAGE}
+WORKDIR /app
+RUN useradd --system --create-home --uid 10001 appuser
+COPY --chmod=0444 app.jar /app/app.jar
+ENV JAVA_OPTS=""
+EXPOSE 8080
+USER appuser
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
