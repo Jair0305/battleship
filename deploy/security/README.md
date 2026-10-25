@@ -11,8 +11,8 @@ revocación de sesiones ni hotfix de producción.**
 El candidato ARM64 pasa las pruebas descritas abajo y el gate de imágenes
 HIGH/CRITICAL. Eso no certifica toda la aplicación: la API legacy sin autorización,
 los tokens emitidos antes del parche y la recuperación de acceso siguen siendo
-bloqueos de promoción. CI del nuevo commit y el ensayo del candidato AMD64
-parcheado también deben completarse. No se acepta riesgo en nombre del usuario.
+bloqueos de promoción. CI de `f9eaa42` y los ensayos de las imágenes publicadas
+ARM64/AMD64 ya pasaron. No se acepta riesgo en nombre del usuario.
 
 Se preservan `/opt/battleship`, únicamente los binds de aplicación
 `127.0.0.1:3006/3007`, backups y artefactos originales. El TLS de prueba corre
@@ -48,7 +48,8 @@ están fijadas en Dockerfiles e instalador. El instalador usa descargas oficiale
 de Adoptium y comprueba SHA256 antes de extraer. Las imágenes oficiales Temurin
 disponibles no ofrecían todavía este parche; no se sustituyó por `latest`.
 Los IDs locales, JAR, SBOM y reportes se registran en el recibo de evidencia.
-Los digests de publicación GHCR se registrarán después de CI/publicación.
+Los digests de publicación GHCR y los config digests escaneados están en el
+[recibo de publicación](../migration/evidence/published-security-20261025.json).
 
 Recibo público: [expanded-security-20261025.json](../migration/evidence/expanded-security-20261025.json).
 Las cuatro imágenes ARM64 están conservadas en
@@ -214,6 +215,45 @@ La recuperación de producción debe usar AMD64 **parcheado** y el dump de la ba
 que contenga las escrituras más nuevas, manteniendo revocaciones de seguridad.
 No volver DNS a la base vieja después de aceptar escrituras en phosrvr.
 
+## Imágenes publicadas y recuperación parcheada
+
+El [CI del PR](https://github.com/Jair0305/battleship/actions/runs/40171163140)
+pasó en ARM64 y AMD64. Su referencia de merge `84d1879` tiene el mismo árbol Git
+que el commit candidato `f9eaa42`: no incorpora código adicional de otra rama.
+La [ejecución de publicación](https://github.com/Jair0305/battleship/actions/runs/40171629106)
+reconstruyó, probó y escaneó ambas arquitecturas desde `f9eaa42`, y publicó cuatro
+imágenes por arquitectura. Ambos despliegues quedaron omitidos.
+
+Los ocho manifests del registro apuntan a los config digests que Trivy escaneó.
+Se descargaron por digest, comprobando arquitectura y etiqueta de revisión;
+no se confunde un tag nuevo con la imagen local del ensayo anterior. Los ocho
+reportes conservan cero HIGH/CRITICAL; los hallazgos Ubuntu siguen abiertos.
+Pasaron también las verificaciones CI de RSC y confianza Java.
+
+Se restauró el snapshot ARM64 de 16 tablas/1.622 filas en volúmenes nuevos,
+uno por arquitectura, con huellas idénticas antes de iniciar el backend.
+Con las imágenes publicadas pasaron dos partidas clasificadas por arquitectura:
+WebSocket y SockJS XHR polling, chat una sola vez para dos jugadores/espectador,
+privacidad, flotas, victoria/Elo, revancha y abandono. Después del reinicio de los
+cuatro servicios seguían funcionando la cuenta, su hash y la sesión anterior.
+Cada clon terminó con 16 tablas/2.007 filas; no se afirma que sus datos aleatorios
+sean iguales entre sí. Sus esquemas completos sí coinciden, antes/después y entre
+arquitecturas, SHA256 `8110579202dbb1f6337e3c96ae2517bb18e04f5e8fbf4c51dc2d76f1a8271ecc`.
+La comparación usa `pg_dump --schema-only --no-owner --no-privileges`, excluyendo
+solo los guards aleatorios `restrict/unrestrict`; no normaliza sentencias DDL.
+
+Los contenedores de estos ensayos no publican puertos host, suman como máximo
+800 MiB/1 CPU por stack y quedaron detenidos, sin OOM. Estos límites son solo
+del ensayo, no del despliegue ni del Docker global. Se conservan los volúmenes
+`battleship_security_patched_{amd64,arm64}_20261025`, snapshots privados y logs en
+`/opt/battleship/migration/security-patched-{amd64,arm64}-20261025` en cada host.
+El [recibo](../migration/evidence/published-security-20261025.json) contiene
+digests completos, hashes de reportes/SBOM y evidencia por arquitectura.
+
+La comprobación posterior al fallo de transporte SSH encontró íntegro y estable
+el archivo ARM64 de recuperación anterior: mismo SHA256 y CRC gzip válido,
+sin procesos tar/gzip pendientes. No se repitió ese build ni se borraron originales.
+
 ## CI, hotfix y siguiente aprobación
 
 El workflow prueba ARM64 y AMD64 nativos; compila/carga cuatro imágenes, verifica
@@ -230,10 +270,10 @@ después de parar escritores. Si aparece actividad en vuelo, reabre el backend
 anterior sin cambiar configuración/base. Fallos posteriores conservan el backup
 y dejan ingreso cerrado: no restauran automáticamente datos antiguos.
 
-Si Cloudflare/ingress siguen demorados, preparar el candidato AMD64 de este mismo
-commit para **hotfix separado en nightly-int**. Antes de solicitar su ventana:
-resolver la API antigua y recuperación/revocación, esperar CI completo, publicar
-digests, probar restauración y flujos con AMD64 parcheado. Proponer entonces una
+Si Cloudflare/ingress siguen demorados, el candidato AMD64 de este mismo commit
+está preparado para **hotfix separado en nightly-int**. Antes de solicitar su ventana:
+resolver la API antigua y recuperación/revocación. CI, digests y restauración/
+flujos del candidato AMD64 parcheado ya están verificados. Proponer entonces una
 sola ventana concreta, con rollback que conserve escrituras nuevas; no ejecutar
 interrupción por este documento. El procedimiento de migración y coordinación
 Cleanly/Caddy permanece en el [runbook](../migration/README.md).

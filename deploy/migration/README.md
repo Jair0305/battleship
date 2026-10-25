@@ -11,6 +11,15 @@ debe ser el parcheado, documentado en [seguridad](../security/README.md), con CI
 aprobado y los bloqueos de aplicación resueltos. El JAR congelado y las imágenes
 originales se conservan exclusivamente como baseline/recuperación privada.
 
+**Actualización de publicación:** el candidato `f9eaa42` pasó CI y publicó imágenes
+ARM64/AMD64 verificadas por digest. Ambas arquitecturas pasaron restauración de
+16 tablas/1.622 filas, partidas con ranking por WebSocket/SockJS y persistencia
+tras reiniciar los cuatro servicios. Los clones terminaron con 2.007 filas y
+quedaron detenidos. Véanse [seguridad](../security/README.md) y el
+[recibo actualizado](evidence/published-security-20261025.json). La API antigua,
+revocación/recuperación de sesiones, acceso Cloudflare e ingress coordinado siguen
+pendientes; esta validación no autoriza abrir producción.
+
 ## Ensayo histórico de paridad
 
 | Componente | Producción AMD64 | Preparación ARM64 |
@@ -348,8 +357,9 @@ Condiciones previas pendientes:
    Auditoría y CI del candidato corregido aprobados, sin omitir el gate.
 4. Confirmación explícita del usuario para este corte.
 5. Resolver los bloqueos de aplicación descritos en el documento de seguridad:
-   API legacy, sesiones previamente expuestas y recuperación de acceso. Preparar
-   y probar también las imágenes AMD64 parcheadas para hotfix/rollback.
+   API legacy, sesiones previamente expuestas y recuperación de acceso. Las
+   imágenes AMD64 parcheadas para hotfix/rollback ya fueron publicadas y
+   probadas de forma privada; revalidar sus digests antes de usarlas.
 
 Secuencia después de confirmar:
 

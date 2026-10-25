@@ -1,0 +1,334 @@
+{
+  "production_cutover_performed": false,
+  "production_hotfix_performed": false,
+  "dns_changed": false,
+  "shared_proxy_reloaded": false,
+  "sessions_revoked": false,
+  "candidate_commit": "f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8",
+  "candidate_tree": "26a0ad5dbc75a907ff65fb81a4da7cb2e0e86032",
+  "pr_ci": {
+    "run": 40171163140,
+    "conclusion": "success",
+    "merge_ref": "84d187914eeeb5963d961c2c0f515a591ffcc9a4",
+    "merge_tree_equals_candidate": true,
+    "deploy": "skipped"
+  },
+  "publication_ci": {
+    "run": 40171629106,
+    "event": "workflow_dispatch",
+    "conclusion": "success",
+    "deploy": "skipped"
+  },
+  "images": [
+    {
+      "image": "ghcr.io/jair0305/battleship-backend:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-amd64",
+      "digest": "sha256:f0caaf85a1ddad35c124392c2b603521199022df734728fa58ad63bf3b1ada64",
+      "platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "scanned_config": "sha256:62e4b68a689ce8c29615054daf0be31bf525024012bbbde19f3e5e3be6b7777b"
+    },
+    {
+      "image": "ghcr.io/jair0305/battleship-frontend:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-amd64",
+      "digest": "sha256:80d1e97484cb45b5ee90491b328806a903e61f5259c19491ca9be3198150ddb9",
+      "platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "scanned_config": "sha256:a5836e0cf57cbc1664399899c8718ad1e274a303bed27ab52a284c877fe58402"
+    },
+    {
+      "image": "ghcr.io/jair0305/battleship-postgres:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-amd64",
+      "digest": "sha256:4758cbac43ebcd2efe00c486b575cad9d4af1c1f278db2b91b6deb1b794cb5b7",
+      "platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "scanned_config": "sha256:fb7f12dfd32386d79b7c751b5835a9e4b8ec72d4da7a4bef846656dc8a501418"
+    },
+    {
+      "image": "ghcr.io/jair0305/battleship-nginx:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-amd64",
+      "digest": "sha256:72e8ab4e94369ddd69c8a72b431aa5e90c364109ab22db5c46d0b6be5742d06e",
+      "platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "scanned_config": "sha256:fa45465b801855b6bdfff79695807802d8d8681d0e94b4f98a2f83080f83a40b"
+    },
+    {
+      "image": "ghcr.io/jair0305/battleship-backend:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-arm64",
+      "digest": "sha256:a6e445e99281df8d8f7496f730f092193e728973a87df204078a6f8de37642fa",
+      "platform": {
+        "architecture": "arm64",
+        "os": "linux"
+      },
+      "scanned_config": "sha256:de9c59558c7b37701153b487d611e5dec2cfaf52ddccd2df5e60714ac2fdb492"
+    },
+    {
+      "image": "ghcr.io/jair0305/battleship-frontend:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-arm64",
+      "digest": "sha256:5ce316ae5cc480283af6d21b95c6db8881804dee2ac43423ff27483dedf31711",
+      "platform": {
+        "architecture": "arm64",
+        "os": "linux"
+      },
+      "scanned_config": "sha256:ea1071784bcc3b021c441069cdf5368b17d17eca24a9a312400493556c84023d"
+    },
+    {
+      "image": "ghcr.io/jair0305/battleship-postgres:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-arm64",
+      "digest": "sha256:31fa7c325d6078ac253795e1604b8d8d65bea0ca4ddfffb3ee0dc25eeedacb5b",
+      "platform": {
+        "architecture": "arm64",
+        "os": "linux"
+      },
+      "scanned_config": "sha256:cb9bd9a5301726a394815d2ef6c105b9e733b16224d37e68916b6f7b690c0b33"
+    },
+    {
+      "image": "ghcr.io/jair0305/battleship-nginx:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-arm64",
+      "digest": "sha256:a68ab11c6be39e71d0ee7679b18a2b7c4d0b7bba439cd82dbe61924cee63e325",
+      "platform": {
+        "architecture": "arm64",
+        "os": "linux"
+      },
+      "scanned_config": "sha256:a989d13a27ac316172c9b8d15bd4c837e9232252fa934bccdac828966c8343e0"
+    }
+  ],
+  "scanner_reports": [
+    {
+      "architecture": "amd64",
+      "image": "ghcr.io/jair0305/battleship-backend:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-amd64",
+      "scanned_config": "sha256:62e4b68a689ce8c29615054daf0be31bf525024012bbbde19f3e5e3be6b7777b",
+      "finding_counts": {
+        "MEDIUM": 22,
+        "LOW": 16
+      },
+      "report_sha256": "002e35b9279b26bcc6765b6080e82799a7ed1d270ebbc3645901eb6f8d4f1336",
+      "sbom_sha256": "277ca3df34ac28c1356f940d406a086fc3fb284ce52e5bd548eae3bb4f92859e"
+    },
+    {
+      "architecture": "amd64",
+      "image": "ghcr.io/jair0305/battleship-frontend:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-amd64",
+      "scanned_config": "sha256:a5836e0cf57cbc1664399899c8718ad1e274a303bed27ab52a284c877fe58402",
+      "finding_counts": {},
+      "report_sha256": "a517d76cb57e7fe0cb0974dfd7469fd9adc493931a492917bd35178462cbbfd7",
+      "sbom_sha256": "6be491d86330aecd7cc9939d8e7e100ed1a699895be2def39535587e01212bd0"
+    },
+    {
+      "architecture": "amd64",
+      "image": "ghcr.io/jair0305/battleship-postgres:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-amd64",
+      "scanned_config": "sha256:fb7f12dfd32386d79b7c751b5835a9e4b8ec72d4da7a4bef846656dc8a501418",
+      "finding_counts": {},
+      "report_sha256": "3f392af878c6a2f5601c21360a7ad0207433a805d0b571d9c56ca841be073813",
+      "sbom_sha256": "4cbc8ee18e01f1358e8ddda26456d51dafb7b4923a5c7fe6d533149e4c4e2686"
+    },
+    {
+      "architecture": "amd64",
+      "image": "ghcr.io/jair0305/battleship-nginx:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-amd64",
+      "scanned_config": "sha256:fa45465b801855b6bdfff79695807802d8d8681d0e94b4f98a2f83080f83a40b",
+      "finding_counts": {},
+      "report_sha256": "3c71a42fe9650d68c092aed24a7b2f74dbe05f83ab4cbc4ead670090534813a8",
+      "sbom_sha256": "fc346a5b2d7b2506dc99ecafe2a9b299c7c610f95063e3cf343719a7c7eae2bd"
+    },
+    {
+      "architecture": "arm64",
+      "image": "ghcr.io/jair0305/battleship-backend:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-arm64",
+      "scanned_config": "sha256:de9c59558c7b37701153b487d611e5dec2cfaf52ddccd2df5e60714ac2fdb492",
+      "finding_counts": {
+        "MEDIUM": 22,
+        "LOW": 16
+      },
+      "report_sha256": "1b6492e041924cb38679a0b7a3a22be8ea0276be9f53c836164c429cf210e54e",
+      "sbom_sha256": "cab95555747fb41c0a1bbdf7a53ccb4228971f7908b28139992af66a1bcf3219"
+    },
+    {
+      "architecture": "arm64",
+      "image": "ghcr.io/jair0305/battleship-frontend:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-arm64",
+      "scanned_config": "sha256:ea1071784bcc3b021c441069cdf5368b17d17eca24a9a312400493556c84023d",
+      "finding_counts": {},
+      "report_sha256": "b477619d197b18c5b03b37168cc2a93d3c0c75f63d5ab1f257751e02a1957719",
+      "sbom_sha256": "f62c94d34e4e59c33692585109f5884235e7c14323374f1d0b25dafb9d65fe79"
+    },
+    {
+      "architecture": "arm64",
+      "image": "ghcr.io/jair0305/battleship-postgres:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-arm64",
+      "scanned_config": "sha256:cb9bd9a5301726a394815d2ef6c105b9e733b16224d37e68916b6f7b690c0b33",
+      "finding_counts": {},
+      "report_sha256": "dafe11f44a29eba2b22cff2bfd3f8b581156cfc554f0103763f6fe9eef48c886",
+      "sbom_sha256": "96af44f010d939e13b535e4cfdf0e94333583b61d95be161fb8c9eb2e87064b1"
+    },
+    {
+      "architecture": "arm64",
+      "image": "ghcr.io/jair0305/battleship-nginx:f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8-arm64",
+      "scanned_config": "sha256:a989d13a27ac316172c9b8d15bd4c837e9232252fa934bccdac828966c8343e0",
+      "finding_counts": {},
+      "report_sha256": "dddf45de2fa07adfecf673ff9d52586de537603bb1ea11387ff689d60362f9ee",
+      "sbom_sha256": "e1a3446a81714a0776b6bb071fd62b845df2c8ccb8da92dc684e0c51be4ed56c"
+    }
+  ],
+  "private_drills": {
+    "amd64": {
+      "utc": "2026-10-25T08:15:29.024508+00:00",
+      "architecture": "amd64",
+      "actual_machine": "x86_64",
+      "candidate_commit": "f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8",
+      "restored_tables": 16,
+      "restored_rows": 1622,
+      "restored_fingerprints_equal": true,
+      "schema_before_after_equal": true,
+      "schema_sha256": "8110579202dbb1f6337e3c96ae2517bb18e04f5e8fbf4c51dc2d76f1a8271ecc",
+      "http_websocket_ranked_smoke": "passed",
+      "http_sockjs_polling_ranked_smoke": "passed",
+      "full_stack_restart_existing_account_hash_session": "passed",
+      "public_lobby_credentials_absent": true,
+      "after_test_tables": 16,
+      "after_test_rows": 2007,
+      "snapshot_manifest_sha256": "62b3929fa1000b6fb6d02276da6135227fe8fa05c0ef2bad156955acd25c4478",
+      "private_log_sha256": "cfb49245d43fc70b4a3ceab484b14d67444cea092e228d8ed18c0280e9b68bfc",
+      "test_code_sha256": {
+        "run.sh": "d20d3bfc1106210416459ce2b49f13c111200fd9a4df32d61f1f845b1131df99",
+        "probe.py": "e45de7bd4b3922961ddcb0d15912487924d94c2f2349c1735aff411bab459f7c",
+        "compose.yml": "51538a964ba81e9ca9b0b1cf3edd1cab34250301c931f964fae1e3f8fb6ffdb8",
+        "smoke.mjs": "7ac39ed5b261e6c4986b9ce2b3d99ac425fc6575ac8086afd0faa191e302ce97"
+      },
+      "resources": [
+        {
+          "service": "db",
+          "running": false,
+          "oom_killed": false,
+          "host_ports": [],
+          "image_ref": "ghcr.io/jair0305/battleship-postgres@sha256:4758cbac43ebcd2efe00c486b575cad9d4af1c1f278db2b91b6deb1b794cb5b7",
+          "memory_limit_bytes": 134217728,
+          "cpu_limit_nanos": 200000000
+        },
+        {
+          "service": "backend",
+          "running": false,
+          "oom_killed": false,
+          "host_ports": [],
+          "image_ref": "ghcr.io/jair0305/battleship-backend@sha256:f0caaf85a1ddad35c124392c2b603521199022df734728fa58ad63bf3b1ada64",
+          "memory_limit_bytes": 469762048,
+          "cpu_limit_nanos": 500000000
+        },
+        {
+          "service": "frontend",
+          "running": false,
+          "oom_killed": false,
+          "host_ports": [],
+          "image_ref": "ghcr.io/jair0305/battleship-frontend@sha256:80d1e97484cb45b5ee90491b328806a903e61f5259c19491ca9be3198150ddb9",
+          "memory_limit_bytes": 201326592,
+          "cpu_limit_nanos": 200000000
+        },
+        {
+          "service": "nginx",
+          "running": false,
+          "oom_killed": false,
+          "host_ports": [],
+          "image_ref": "ghcr.io/jair0305/battleship-nginx@sha256:72e8ab4e94369ddd69c8a72b431aa5e90c364109ab22db5c46d0b6be5742d06e",
+          "memory_limit_bytes": 33554432,
+          "cpu_limit_nanos": 100000000
+        }
+      ],
+      "volume_preserved": "battleship_security_patched_amd64_20261025",
+      "private_artifacts_path": "/opt/battleship/migration/security-patched-amd64-20261025",
+      "production_modified": false
+    },
+    "arm64": {
+      "utc": "2026-10-25T08:15:32.188808+00:00",
+      "architecture": "arm64",
+      "actual_machine": "aarch64",
+      "candidate_commit": "f9eaa42f84dea7dac67c6f06aa4c8db9e1c78fc8",
+      "restored_tables": 16,
+      "restored_rows": 1622,
+      "restored_fingerprints_equal": true,
+      "schema_before_after_equal": true,
+      "schema_sha256": "8110579202dbb1f6337e3c96ae2517bb18e04f5e8fbf4c51dc2d76f1a8271ecc",
+      "http_websocket_ranked_smoke": "passed",
+      "http_sockjs_polling_ranked_smoke": "passed",
+      "full_stack_restart_existing_account_hash_session": "passed",
+      "public_lobby_credentials_absent": true,
+      "after_test_tables": 16,
+      "after_test_rows": 2007,
+      "snapshot_manifest_sha256": "4fc90aeaff9ad39b70880dd927036a6dea469c317348f26c5bdf6b1c32b2828b",
+      "private_log_sha256": "9a3bff143d2158f3d038c280fdd4dcd29247ee829706ea0fb2589253ccc8b809",
+      "test_code_sha256": {
+        "run.sh": "9f6fd74d24ad23edf805b1b363f2845b90df3428fbe7710009501904012225f2",
+        "probe.py": "9fd9c649da1e2ec3e26f5d7eb254a55b90ee0a685ac14a8a2464151d40e97744",
+        "compose.yml": "7b98943e31b055c23b1c61cb051d19a0d75e80fed6b5c0a178629275ac5b6517",
+        "smoke.mjs": "7ac39ed5b261e6c4986b9ce2b3d99ac425fc6575ac8086afd0faa191e302ce97"
+      },
+      "resources": [
+        {
+          "service": "db",
+          "running": false,
+          "oom_killed": false,
+          "host_ports": [],
+          "image_ref": "ghcr.io/jair0305/battleship-postgres@sha256:31fa7c325d6078ac253795e1604b8d8d65bea0ca4ddfffb3ee0dc25eeedacb5b",
+          "memory_limit_bytes": 134217728,
+          "cpu_limit_nanos": 200000000
+        },
+        {
+          "service": "backend",
+          "running": false,
+          "oom_killed": false,
+          "host_ports": [],
+          "image_ref": "ghcr.io/jair0305/battleship-backend@sha256:a6e445e99281df8d8f7496f730f092193e728973a87df204078a6f8de37642fa",
+          "memory_limit_bytes": 469762048,
+          "cpu_limit_nanos": 500000000
+        },
+        {
+          "service": "frontend",
+          "running": false,
+          "oom_killed": false,
+          "host_ports": [],
+          "image_ref": "ghcr.io/jair0305/battleship-frontend@sha256:5ce316ae5cc480283af6d21b95c6db8881804dee2ac43423ff27483dedf31711",
+          "memory_limit_bytes": 201326592,
+          "cpu_limit_nanos": 200000000
+        },
+        {
+          "service": "nginx",
+          "running": false,
+          "oom_killed": false,
+          "host_ports": [],
+          "image_ref": "ghcr.io/jair0305/battleship-nginx@sha256:a68ab11c6be39e71d0ee7679b18a2b7c4d0b7bba439cd82dbe61924cee63e325",
+          "memory_limit_bytes": 33554432,
+          "cpu_limit_nanos": 100000000
+        }
+      ],
+      "volume_preserved": "battleship_security_patched_arm64_20261025",
+      "private_artifacts_path": "/opt/battleship/migration/security-patched-arm64-20261025",
+      "production_modified": false
+    }
+  },
+  "remaining_gates": [
+    "legacy API authorization/retirement choice",
+    "recovery and revocation of previously exposed sessions",
+    "unfixed Ubuntu findings remain open",
+    "verified Cloudflare account/zone and coordinated ingress",
+    "explicit production-cutover confirmation"
+  ],
+  "scanner_versions": {
+    "amd64": "Version: 0.76.1\nVulnerability DB:\n  Version: 2\n  UpdatedAt: 2026-10-25 01:20:33.190884269 +0000 UTC\n  NextUpdate: 2026-10-26 01:20:33.190871941 +0000 UTC\n  DownloadedAt: 2026-10-25 07:11:27.307546421 +0000 UTC\nJava DB:\n  Version: 1\n  UpdatedAt: 2026-10-25 00:59:20.065031654 +0000 UTC\n  NextUpdate: 2026-10-28 00:59:20.065031063 +0000 UTC\n  DownloadedAt: 2026-10-25 07:11:44.98859808 +0000 UTC\n",
+    "arm64": "Version: 0.76.1\nVulnerability DB:\n  Version: 2\n  UpdatedAt: 2026-10-25 01:20:33.190884269 +0000 UTC\n  NextUpdate: 2026-10-26 01:20:33.190871941 +0000 UTC\n  DownloadedAt: 2026-10-25 07:11:31.694950682 +0000 UTC\nJava DB:\n  Version: 1\n  UpdatedAt: 2026-10-25 00:59:20.065031654 +0000 UTC\n  NextUpdate: 2026-10-28 00:59:20.065031063 +0000 UTC\n  DownloadedAt: 2026-10-25 07:11:49.428692715 +0000 UTC\n"
+  },
+  "utc": "2026-10-25T08:17:40.748122+00:00",
+  "arm_write_snapshot_transferred_sha256": "ac231d394811c904c72bb5811c13e4f9928db95db9f736b8418e9395a8572f3a",
+  "image_archive_connection_reset_followup": {
+    "path": "/opt/battleship/backups/expanded-security-arm64-20261025.tar.gz",
+    "sha256": "44106585dd0a5e9d2fa12ab187849d3253ae645381bf84416bf23cd9c9995563",
+    "size_bytes": 495907206,
+    "gzip_integrity": "passed",
+    "size_mtime_stable_during_verification": true,
+    "tar_gzip_processes_remaining": false
+  },
+  "source_revalidation": {
+    "utc": "2026-10-25T08:18:51Z",
+    "backend_image_id": "sha256:d554fb46e01a24c4cbbf2aee7f689917ddaf5107fa635fc54dd9e435029c7a72",
+    "frontend_reference": "ghcr.io/jair0305/battleship-frontend:af4f477",
+    "registered_accounts": 1,
+    "sessions": 7,
+    "active_games": 0,
+    "pending_ready_deadlines": 0,
+    "homepage_read_only_probe": "passed",
+    "lobby_read_only_probe": "passed"
+  }
+}
