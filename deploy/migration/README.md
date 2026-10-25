@@ -27,6 +27,10 @@ publicada solamente ofrece AMD64. Por eso no se usó `latest` ni se desplegó HE
 Los Dockerfiles de aplicación solo reciben argumentos para fijar los runtimes de
 los siguientes builds; los archivos de código y los lockfiles no cambian.
 
+Archivo de recuperación de ambas imágenes ARM64 en phosrvr:
+`/opt/battleship/backups/migration-arm64-images.tar.gz`, SHA256
+`92ef1d3b5ed2fccbc3c25955d2d63395ad8630f484030c70a604d48b9370cfce`.
+
 ## Inventario y propiedad
 
 | Recurso | Hallazgo / tratamiento |
@@ -136,6 +140,8 @@ y API por el proxy TLS aislado. Arquitectura, versiones, hash del JAR, límites,
 puertos y `nginx -t` verificados. YAML, actionlint 1.7.12, `bash -n`, compilación
 Python y unidades systemd validados. Las advertencias de permisos de unidades
 globales de observabilidad no se corrigieron por estar fuera de alcance.
+También se reinició PostgreSQL en el destino y se verificó que sus 16 tablas y
+303 filas conservaran todos los hashes; el volumen persiste tras reiniciar.
 
 La automatización visual de navegador presentó timeouts; no se da por validado
 un recorrido visual completo en esta sesión. Las pruebas anteriores sí ejercen
