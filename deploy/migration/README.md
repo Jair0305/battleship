@@ -245,9 +245,8 @@ Prueba inversa después de escribir datos nuevos con la aplicación ARM64:
 
 Los archivos privados y globals contienen secretos: conservar permisos 0600,
 directorios 0700 y no adjuntarlos a PRs/logs/reportes. No se programó retención ni
-eliminación. El timer diario propuesto permanece sin instalar/activar; no había
-uno exclusivo en origen. Su instalación se hace después del corte y requiere
-`.production-active`. Acordar destino off-host y retención antes de cerrar rollback.
+eliminación. El timer diario ya fue instalado tras el corte (ver «Corte ejecutado»);
+requiere `.production-active`. Acordar destino off-host y retención antes de cerrar rollback.
 
 ## Validación funcional realizada
 
@@ -493,6 +492,80 @@ Si falla un despliegue CI con ingreso cerrado, el script no restaura una base
 antigua automáticamente: inspeccionar el backup privado y decidir si hubo nuevas
 escrituras antes de recuperar. Si no llegó a cambiar contenedores, `docker start`
 de los contenedores originales de Battleship permite reabrir sin tocar datos.
+
+## Corte ejecutado (cutover20261025-r1)
+
+Receipt público: [evidence/cutover-20261025-r1.json](evidence/cutover-20261025-r1.json).
+Todo lo anterior a esta sección que describa el corte como pendiente quedó superado.
+
+| Hecho | Valor (UTC, 2026-10-25) |
+| --- | --- |
+| Origen en 503, backend detenido, 0 partidas / 0 deadlines | 21:08:07 |
+| Respaldo final consistente (16 tablas, 112 filas) y transferencia SHA256 | 21:09:12 |
+| Restore, revocación y arranque en phosrvr (DATA_READY) | 21:10:09 |
+| Hoja Cleanly instalada, una recarga | 21:10:34 |
+| DNS Battleship → 129.146.117.87 (único Save) | 21:12:48 |
+| Público estable en phosrvr (8/8 sondeos 200) | 21:14:42 |
+| Smokes públicos WS y SockJS `--ranked`, 7/7 cada uno | tras 21:15 |
+| Marcador `.production-active` y timer diario | 21:31 |
+
+- **Autoridad de datos: phosrvr**, volumen `battleship_postgres_data`. La base de
+  nightly-int quedó congelada en 503 solo como evidencia/respaldo; **no se reabre
+  ni se apunta DNS a ella** (no tiene las escrituras posteriores ni la revocación).
+- **Revocación real**: 7 sesiones revocadas / 7 tokens rotados; solo cambiaron las
+  columnas de token de `jugador` y `sesion_jugador`; cuenta, hashes, filas y
+  relaciones se conservaron. Los 7 tokens previos devuelven 401 por nginx y por el
+  dominio público.
+- **Imágenes ARM64 por digest f4a06e6**: backend `sha256:7a9c6f74…`, frontend
+  `sha256:d063cd79…`, postgres `sha256:69bb3872…`, nginx `sha256:dd3c4b16…`.
+- **Cuentas de prueba creadas en la base real**: `zz_probe_c8909a91` (validación
+  local) y varias `migration_*` de los smokes públicos. Son de prueba; sus
+  credenciales están en archivos 0600 del host y no se publican.
+
+### Desviaciones y observaciones del corte
+
+1. El script del origen falló antes del primer cambio por `input`+`stdin` en el
+   helper y, en la prueba en seco, por un `;` antes de `\gexec`. Se corrigió en un
+   script nuevo; el original quedó intacto.
+2. El restore comparó el schema con `pg_dump`: idéntico salvo el render de tres
+   `CHECK` (`mesa_estado_check`, `partida_estado_check`,
+   `participacion_resultado_check`). Mismas columnas y mismos literales
+   (12/3/12 valores); solo cambia el cast `ANY ((ARRAY[…])::text[])` vs
+   `ANY (ARRAY[(…)::text,…])` por la versión menor de PostgreSQL.
+3. Los contenedores clon detenidos `battleship-*` que ya existían en phosrvr
+   (mismo proyecto/nombre) fueron reemplazados por compose. Antes se conservaron
+   como imágenes `battleship-superseded/*:20261025-r1` más su inspect JSON.
+4. Durante la propagación (21:12–21:14) el dominio alternó 200/503 hasta quedar
+   estable en phosrvr.
+
+### Operación posterior al corte
+
+- `/opt/battleship/.env` es ahora el entorno con el que se creó la base
+  (`candidate.env`); el anterior, de la prueba previa, tenía otra contraseña de
+  PostgreSQL y habría roto el backend en el primer despliegue. Copia previa en
+  `/opt/battleship/config-before-20261025-pre-adoption/`.
+- `compose`, `nginx.conf`, `consistent-backup.py` y `database-fingerprint.sql` de
+  `/opt/battleship` son byte a byte los de `/opt/battleship/cutover/f4a06e6`. Un
+  `compose up --dry-run` desde `/opt/battleship` recrearía **solo nginx** (cambia
+  la ruta del bind mount); ocurrirá dentro de la pausa de ingreso del primer
+  despliegue, no se ejecutó antes para no interrumpir producción.
+- `activate-production.py` valida el contrato exacto (entorno, cuatro contenedores
+  sobre las imágenes del `.env`, volumen autoritativo, receipt DATA_READY, backup
+  fresco y restore a una base desechable con huellas idénticas) y solo con
+  `--apply` escribe `.production-active` (JSON). `deploy-phosrvr.sh` valida su
+  contenido antes de desplegar.
+- `battleship-backup.timer` (04:15 UTC) está instalado y habilitado; es exclusivo
+  de Battleship. `daily-backup.sh` re-verifica `SHA256SUMS` y escribe
+  `backups/last-daily.public.json`. Primer resultado verificado:
+  `daily-20261025T213133Z`, 16 tablas, 498 filas.
+- **El backup es solo local (dump lógico en el mismo host). No hay copia off-host
+  ni retención automática**; no se borra nada. El mecanismo off-host existente en
+  phosrvr (`nightly-recovery`) tiene alcance fijo de otros servicios y requiere
+  que su responsable agregue Battleship; está pendiente.
+- El workflow `deploy.yml` sigue **deshabilitado** en GitHub y
+  `BATTLESHIP_DEPLOY_TARGET` no está definida. Habilitarlo exige antes: que
+  `main` contenga estos cambios, una prueba de despliegue con ingreso pausado y
+  decidir la pausa breve de nginx descrita arriba.
 
 ## Pendientes de cierre
 

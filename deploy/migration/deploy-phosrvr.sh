@@ -4,6 +4,14 @@ umask 077
 cd /opt/battleship
 test "$(uname -m)" = aarch64
 test -f .production-active
+# The marker is written only by activate-production.py after the exact contract passed.
+python3 - <<'PY'
+import json, sys
+m = json.load(open('.production-active'))
+ok = (m.get('contract_version') == 1 and m.get('status') == 'active'
+      and m.get('authority') == {'host': 'phosrvr', 'volume': 'battleship_postgres_data'})
+sys.exit(0 if ok else 'Activation marker does not describe the validated production contract')
+PY
 test -f .env
 revision=${1:?Git revision required}
 actor=${2:?Registry actor required}

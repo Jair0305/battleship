@@ -16,7 +16,9 @@ class DeployGuardsTests(unittest.TestCase):
         revision = "a" * 40
         candidate = root / "incoming" / revision
         candidate.mkdir(parents=True)
-        (root / ".production-active").touch()
+        (root / ".production-active").write_text(json.dumps({
+            "contract_version": 1, "status": "active",
+            "authority": {"host": "phosrvr", "volume": "battleship_postgres_data"}}))
         original = "BATTLESHIP_POSTGRES_VOLUME=battleship_postgres_data\nBACKEND_IMAGE=old-backend\nFRONTEND_IMAGE=old-frontend\n"
         (root / ".env").write_text(original)
         for name in ["docker-compose.phosrvr.yml", "nginx.conf"]:
