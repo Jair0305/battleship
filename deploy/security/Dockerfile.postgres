@@ -1,0 +1,18 @@
+# Preserve PostgreSQL 16.15 and gosu 1.19 source; refresh the helper's Go runtime.
+FROM golang@sha256:b8c9b82affbbb82a020bbcf998dad2ba9516944ac7e883524642a481a9505e9c AS gosu-build
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local
+RUN apk add --no-cache git
+WORKDIR /source
+RUN git init . \
+    && git remote add origin https://github.com/tianon/gosu.git \
+    && git fetch --depth 1 origin 6456aaa0f3c854d199d0f037f068eb97515b7513 \
+    && git checkout --detach FETCH_HEAD \
+    && go get github.com/moby/sys/user@v0.4.1 golang.org/x/sys@v0.44.0 \
+    && go mod download && go mod verify \
+    && go test ./... \
+    && go build -trimpath -ldflags '-w' -o /gosu . \
+    && go version -m /gosu
+
+FROM postgres@sha256:f4610795587492cd4fb887c2dc3de301b813278bb6f616992061141b5f15ac36
+COPY --from=gosu-build --chmod=0755 /gosu /usr/local/bin/gosu
+RUN gosu --version && gosu nobody id && gosu postgres id
