@@ -1,5 +1,7 @@
 .agents
 .git
+.env
+.env.*
 .idea
 target
 data

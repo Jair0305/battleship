@@ -137,7 +137,7 @@ public class JuegoServiceImpl implements JuegoService {
         payload.put("deadline", state.deadline);
 
         try {
-            messagingTemplate.convertAndSend("/topic/sala/" + salaId + "/estado", payload);
+            messagingTemplate.convertAndSend("/topic/sala/" + salaId + "/estado", (Object) payload);
         } catch (Exception ignored) {
         }
 

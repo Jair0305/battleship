@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.2.5</version>
+		<version>4.0.9</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.jair.battleship</groupId>
@@ -16,6 +16,7 @@
 	<properties>
 		<java.version>21</java.version>
 		<lombok.version>1.18.42</lombok.version>
+		<jackson-bom.version>3.1.8</jackson-bom.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -24,7 +25,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -87,6 +88,20 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>repackage</id>
+						<configuration>
+							<excludes>
+								<!-- Production uses PostgreSQL; retain the driver for spring-boot:run. -->
+								<exclude>
+									<groupId>com.microsoft.sqlserver</groupId>
+									<artifactId>mssql-jdbc</artifactId>
+								</exclude>
+							</excludes>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

@@ -1,0 +1,78 @@
+{
+  "utc": "2026-10-25T05:06:52.621910+00:00",
+  "authorization": "User explicitly requested vulnerability repair; production cutover still requires confirmation.",
+  "application_source_base": "af4f47783e6f44d6b086648348bc37392d661ecf",
+  "backend_revision_unchanged": "c80b74a6194e1b014c314c53f041ff41370d6bcd",
+  "dependency_versions": {
+    "next": "16.4.1",
+    "eslint-config-next": "16.4.1",
+    "follow-redirects": "1.16.1",
+    "source-map-js": "1.2.2",
+    "zod": "4.6.7",
+    "postcss-selector-parser": "7.1.6",
+    "tailwindcss": "3.4.19",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "package_json_sha256": "31258e3a1d4c6ca486fceadc1bc210acc740d21398ffd5c87579f46e7d99461e",
+  "package_lock_sha256": "fe719885510d19dc560cee4e7e5878c4f6a2f9721c340986cb3ed66c490e18bf",
+  "npm_audit_vulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "local_checks": {
+    "npm_ci": "passed",
+    "eslint": "passed",
+    "typescript": "passed",
+    "node": "22.20.0"
+  },
+  "tailwind_css_comparison": {
+    "identical": true,
+    "sha256": "8b11dcc3ee1456fca10511373c7c51ceb4a0b96e4d7bc4d7d4be44b0ca314f73"
+  },
+  "arm64_image": {
+    "tag": "battleship-frontend:security-20261025",
+    "id": "sha256:2637e728187faeb0bf911c24f242bbf8b5200d70a4ff8df1660c9c497e6c44fa",
+    "node": "22.23.1",
+    "next": "16.4.1",
+    "native_build": "passed",
+    "audit_before_and_after_prune": "passed"
+  },
+  "builder": {
+    "memory_bytes": 4294967296,
+    "cpus": 1.5,
+    "oom": false,
+    "stopped": true,
+    "shared_build_lock_used": true
+  },
+  "image_archive": {
+    "path": "/opt/battleship/backups/frontend-security-20261025.tar.gz",
+    "sha256": "2e7381b7f954385a3215482799c577fb7ff9196760361535155f57bc58b9c939",
+    "gzip_oci_integrity_verified": true
+  },
+  "preflight_smoke": {
+    "status": "passed",
+    "groups": 4,
+    "database_volume": "battleship_postgres_preflight_20261025",
+    "flows": [
+      "registration",
+      "password login",
+      "session persistence and invalid-session rejection",
+      "two players and spectator",
+      "STOMP WebSocket chat exactly once",
+      "fleet placement and spectator privacy",
+      "shots and victory",
+      "rematch",
+      "resignation and leave"
+    ]
+  },
+  "production_cutover_performed": false,
+  "dns_changed": false,
+  "public_proxy_reloaded": false,
+  "preflight_containers_stopped": true,
+  "ci_state": "pending new commit run; local and native ARM checks do not claim CI success"
+}

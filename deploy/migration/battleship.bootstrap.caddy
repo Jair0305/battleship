@@ -1,0 +1,6 @@
+# Bootstrap with this project's existing certificate; switch to managed TLS
+# only after the approved DNS cutover and successful issuance for this domain.
+battleship.nightly.mx {
+    tls /config/battleship-tls/fullchain.pem /config/battleship-tls/privkey.pem
+    reverse_proxy 127.0.0.1:3006
+}

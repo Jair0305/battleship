@@ -1,0 +1,97 @@
+{
+  "cutover": "cutover20261025-r1",
+  "date": "2026-10-25",
+  "runtime_commit": "f4a06e6e2a9f4d9f197c6f69ea8962adb91586ac",
+  "authority_after_cut": {
+    "host": "phosrvr",
+    "volume": "battleship_postgres_data"
+  },
+  "source_after_cut": "nightly-int frozen in 503; backend stopped; database retained as evidence only, never reopened",
+  "timeline_utc": {
+    "window_started": "2026-10-25T21:08:07.957063Z",
+    "source_backup_completed": "2026-10-25T21:09:12.624271Z",
+    "data_ready": "2026-10-25T21:10:09Z",
+    "ingress_ready_reload": "2026-10-25T21:10:34.658Z",
+    "dns_save": "2026-10-25T21:12:48.650Z",
+    "public_stable_on_phosrvr": "2026-10-25T21:14:42Z",
+    "activation_marker": "2026-10-25T21:31:21Z"
+  },
+  "source_counts_before_and_after_freeze": {
+    "active_games": 0,
+    "ready_deadlines": 0,
+    "accounts": 1,
+    "sessions": 7
+  },
+  "final_backup": {
+    "tables": 16,
+    "rows": 112,
+    "dump_sha256": "a1d43208e274600988a488f761111bfa547d5f91307bc727a8336ab70787478a",
+    "transfer_sha256": "258c9d225542e777b13fdf946df353768dd7f974c923cbad1629824fdb399c3a",
+    "source_schema_with_acl_sha256": "6879dd719bff29ea442b539868e966319f47163a29791ae24b3500573684a74a"
+  },
+  "restore": {
+    "exact_fingerprints": true,
+    "roles": 1,
+    "sequences": 12,
+    "target_schema_sha256": "fe8914f91dd358553267580c71605245732526683947d9dcd51e7ad10ad17937",
+    "schema_difference": "pg_dump rendering of 3 CHECK expressions only (mesa_estado_check, partida_estado_check, participacion_resultado_check): same columns, same literal sets (12/3/12), PostgreSQL minor-version deparse"
+  },
+  "revocation": {
+    "revoked_sessions": 7,
+    "rotated_tokens": 7,
+    "changed_tables": [
+      "public.jugador",
+      "public.sesion_jugador"
+    ],
+    "accounts_hashes_rows_relations_preserved": true,
+    "previous_tokens_rejected": "7/7 through nginx and through the public domain"
+  },
+  "post_revocation_backup_dump_sha256": "17a3cf2bb8c5230720636d9c2fb684365313c147196f92402a18885fc40b38b7",
+  "images_arm64": {
+    "backend": "ghcr.io/jair0305/battleship-backend@sha256:7a9c6f7483781f5ecd0dd95547fe45363f33557253630990488b6a882cc26765",
+    "frontend": "ghcr.io/jair0305/battleship-frontend@sha256:d063cd79efa2079465826912b4cd65f34173ac9f5ae9540cc7ac95a1c436677c",
+    "postgres": "ghcr.io/jair0305/battleship-postgres@sha256:69bb38724ee6ff0d5011b7b457ef924ceb6e06e6468996d76a417606fdd02c71",
+    "nginx": "ghcr.io/jair0305/battleship-nginx@sha256:dd3c4b1622f02cd09cc9fc68bd60c413bca24bb3d7697f5ca9be68e4ebc85da1"
+  },
+  "public_validation": {
+    "websocket_ranked": "passed 7/7",
+    "sockjs_polling_ranked": "passed 7/7",
+    "legacy_apis": "404",
+    "lobby_exposes_tokens": false,
+    "persistence_after_backend_restart": "passed",
+    "sensitive_paths": {
+      "/actuator/env": 404,
+      "/h2-console": 404,
+      "/api/admin": 404
+    }
+  },
+  "test_accounts_in_production_database": [
+    "zz_probe_c8909a91",
+    "migration_* (public smoke runs)"
+  ],
+  "deviations": [
+    "source script failed before any lifecycle change (input/stdin helper); fixed in a new script, original intact",
+    "semicolon before \\gexec in the sequence query found in dry run and fixed",
+    "first target run stopped at the schema assertion (CHECK deparse) and was resumed",
+    "pre-existing stopped battleship-* rehearsal containers on phosrvr preserved as battleship-superseded/*:20261025-r1 images plus inspect JSON before compose replaced them",
+    "public domain alternated 200/503 during propagation 21:12-21:14"
+  ],
+  "backup_status": {
+    "daily_timer": "battleship-backup.timer enabled, 04:15 UTC",
+    "first_verified_result": {
+      "backup": "daily-20261025T213133Z",
+      "tables": 16,
+      "rows": 498
+    },
+    "custody": "local daily logical dump plus off-host restic snapshot through the existing receiver (host vm4-battleship, tag battleship-critical-v1); retention not configured",
+    "offhost_first_result": {
+      "snapshot": "65a13b13cb18d6cfc572449b756ab62fbf4eaa44f17b9657a3cbfb38be41fbf5",
+      "source": "daily-20261025T213133Z",
+      "completed_utc": "2026-10-25T21:43:40Z",
+      "readback": "snapshot confirmed, restic ls, selective restore with identical SHA256",
+      "restore_fingerprints": "identical, 16 tables / 498 rows in a throwaway database",
+      "other_services_snapshots_untouched": "33 critical-state-v1 + 1 legacy-quarantine-v1",
+      "timer": "battleship-offhost-backup.timer 04:45 UTC"
+    }
+  }
+}

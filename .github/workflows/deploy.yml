@@ -4,30 +4,58 @@ on:
   push:
     branches:
       - main
+  pull_request:
   workflow_dispatch:
+    inputs:
+      publish_security_candidate:
+        description: Publish tested candidate images without activating production
+        type: boolean
+        default: false
 
 permissions:
   contents: read
-  packages: write
+
+concurrency:
+  group: battleship-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   BACKEND_IMAGE: ghcr.io/jair0305/battleship-backend
   FRONTEND_IMAGE: ghcr.io/jair0305/battleship-frontend
+  DATABASE_IMAGE: ghcr.io/jair0305/battleship-postgres
+  PROXY_IMAGE: ghcr.io/jair0305/battleship-nginx
 
 jobs:
   build-and-push:
-    name: Build, test and push images
-    runs-on: ubuntu-latest
+    name: Build, test and scan (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+          - arch: amd64
+            runner: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Test deployment safety guards
+        run: python3 -m unittest discover -s deploy/security -p 'test_*.py' -v
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "21.0.13+9.0.LTS"
+
+      - name: Patch build JDK certificate trust
+        run: sudo sh battleship-backend/docker/patch-java-trust.sh "$JAVA_HOME"
 
       - name: Test backend
         working-directory: battleship-backend
@@ -38,64 +66,133 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "22.23.4"
           cache: npm
           cache-dependency-path: battleship-frontend/package-lock.json
 
       - name: Verify frontend
         working-directory: battleship-frontend
         run: |
+          npm install --global npm@11.21.1
           npm ci
           npm audit --audit-level=moderate
           npm run lint
           npm run build
           npx tsc --noEmit --incremental false
+          node --test ../deploy/migration/stomp-frames.test.mjs
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./battleship-backend
+          file: ./battleship-backend/Dockerfile
+          load: true
+          platforms: linux/${{ matrix.arch }}
+          tags: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}-${{ matrix.arch }}
+          build-args: MAVEN_SKIP_TESTS=false
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./battleship-frontend
+          file: ./battleship-frontend/Dockerfile
+          load: true
+          platforms: linux/${{ matrix.arch }}
+          build-args: NEXT_PUBLIC_API_BASE=
+          tags: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}-${{ matrix.arch }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build PostgreSQL image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deploy/security/Dockerfile.postgres
+          load: true
+          platforms: linux/${{ matrix.arch }}
+          tags: ${{ env.DATABASE_IMAGE }}:${{ github.sha }}-${{ matrix.arch }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build Nginx image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deploy/security/Dockerfile.nginx
+          load: true
+          platforms: linux/${{ matrix.arch }}
+          tags: ${{ env.PROXY_IMAGE }}:${{ github.sha }}-${{ matrix.arch }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Verify packaged runtimes
+        env:
+          IMAGE_TAG: ${{ github.sha }}-${{ matrix.arch }}
+        run: |
+          docker run --rm --entrypoint node "$FRONTEND_IMAGE:$IMAGE_TAG" -p 'JSON.stringify(process.versions)'
+          docker run --rm --entrypoint java "$BACKEND_IMAGE:$IMAGE_TAG" -version
+          docker run --rm --entrypoint sh "$BACKEND_IMAGE:$IMAGE_TAG" -ec 'test "$(id -u)" = 10001; test -f /etc/alpine-release; test -z "$(find /lib /usr/lib /opt/java/openjdk -iname "*expat*" -o -iname "*fontconfig*" -o -name "libiberty*")"'
+          docker run --rm --entrypoint sh "$DATABASE_IMAGE:$IMAGE_TAG" -ec 'postgres --version; gosu nobody id; gosu postgres id'
+          docker run --rm --entrypoint nginx "$PROXY_IMAGE:$IMAGE_TAG" -v
+
+      - name: Scan all production images and create SBOMs
+        env:
+          IMAGE_TAG: ${{ github.sha }}-${{ matrix.arch }}
+        run: |
+          bash deploy/security/scan-images.sh "$RUNNER_TEMP/security-scan" \
+            "$BACKEND_IMAGE:$IMAGE_TAG" "$FRONTEND_IMAGE:$IMAGE_TAG" \
+            "$DATABASE_IMAGE:$IMAGE_TAG" "$PROXY_IMAGE:$IMAGE_TAG"
+
+      - name: Verify every packaged RSC variant
+        env:
+          IMAGE_TAG: ${{ github.sha }}-${{ matrix.arch }}
+        run: python3 deploy/security/verify-next-vendor.py "$FRONTEND_IMAGE:$IMAGE_TAG" battleship-frontend/package-lock.json
+
+      - name: Verify patched JRE certificate trust
+        env:
+          IMAGE_TAG: ${{ github.sha }}-${{ matrix.arch }}
+        run: python3 deploy/security/verify-java-trust.py "$BACKEND_IMAGE:$IMAGE_TAG"
+
+      - name: Retain dated scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports-${{ github.sha }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/security-scan/reports/
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Log in to GHCR
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish_security_candidate)
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push backend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./battleship-backend
-          file: ./battleship-backend/Dockerfile
-          push: true
-          platforms: linux/amd64
-          tags: |
-            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-            ${{ env.BACKEND_IMAGE }}:latest
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./battleship-frontend
-          file: ./battleship-frontend/Dockerfile
-          push: true
-          platforms: linux/amd64
-          build-args: |
-            NEXT_PUBLIC_API_BASE=
-          tags: |
-            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-            ${{ env.FRONTEND_IMAGE }}:latest
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Publish tested images
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish_security_candidate)
+        env:
+          IMAGE_TAG: ${{ github.sha }}-${{ matrix.arch }}
+        run: |
+          for repository in "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$DATABASE_IMAGE" "$PROXY_IMAGE"; do
+            docker push "$repository:$IMAGE_TAG"
+          done
 
   deploy:
-    name: Deploy to nightly-int
+    name: Deploy to phosrvr
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.BATTLESHIP_DEPLOY_TARGET == 'phosrvr'
     permissions:
       contents: read
       packages: read
@@ -105,53 +202,50 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.PHOSRVR_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PHOSRVR_SSH_KNOWN_HOSTS }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/battleship_deploy_key
-          chmod 600 ~/.ssh/battleship_deploy_key
-          ssh-keyscan -H "${{ secrets.DEPLOY_SSH_HOST }}" >> ~/.ssh/known_hosts
+          install -d -m 700 ~/.ssh
+          umask 077
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/battleship_deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Verify migration activation
+        env:
+          SSH_HOST: ${{ secrets.PHOSRVR_SSH_HOST }}
+          SSH_USER: ${{ secrets.PHOSRVR_SSH_USER }}
+        run: |
+          test "$SSH_HOST" = "129.146.117.87"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i ~/.ssh/battleship_deploy_key "$SSH_USER@$SSH_HOST" 'test "$(uname -m)" = aarch64 && test -f /opt/battleship/.production-active'
 
       - name: Upload compose assets
+        env:
+          SSH_HOST: ${{ secrets.PHOSRVR_SSH_HOST }}
+          SSH_USER: ${{ secrets.PHOSRVR_SSH_USER }}
         run: |
-          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" "sudo mkdir -p /opt/battleship && sudo chown ${{ secrets.DEPLOY_SSH_USER }}:${{ secrets.DEPLOY_SSH_USER }} /opt/battleship"
-          scp -i ~/.ssh/battleship_deploy_key deploy/docker-compose.yml deploy/nginx.conf deploy/host-nginx-battleship.nightly.mx.conf deploy/reload-nginx-after-cert-renewal.sh "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:/opt/battleship/"
-
-      - name: Install host nginx route
-        run: |
-          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" <<'REMOTE'
-          set -euo pipefail
-          sudo install -m 0644 /opt/battleship/host-nginx-battleship.nightly.mx.conf /etc/nginx/sites-available/battleship.nightly.mx
-          sudo ln -sfn /etc/nginx/sites-available/battleship.nightly.mx /etc/nginx/sites-enabled/battleship.nightly.mx
-          sudo mkdir -p /etc/letsencrypt/renewal-hooks/deploy
-          sudo install -m 0755 /opt/battleship/reload-nginx-after-cert-renewal.sh /etc/letsencrypt/renewal-hooks/deploy/reload-nginx
-          sudo nginx -t
-          sudo systemctl reload nginx
-          REMOTE
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/battleship_deploy_key "$SSH_USER@$SSH_HOST" 'mkdir -p /opt/battleship/incoming/${{ github.sha }}'
+          scp -o StrictHostKeyChecking=yes -i ~/.ssh/battleship_deploy_key deploy/docker-compose.phosrvr.yml deploy/nginx.conf deploy/migration/deploy-phosrvr.sh deploy/migration/consistent-backup.py deploy/migration/database-fingerprint.sql "$SSH_USER@$SSH_HOST:/opt/battleship/incoming/${{ github.sha }}/"
 
       - name: Pull and restart Battleship stack
+        env:
+          SSH_HOST: ${{ secrets.PHOSRVR_SSH_HOST }}
+          SSH_USER: ${{ secrets.PHOSRVR_SSH_USER }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" <<'REMOTE'
-          set -euo pipefail
-          cd /opt/battleship
-          cat > .env <<'ENV'
-          BACKEND_IMAGE=${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-          FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          ENV
-          printf '%s\n' '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
-          docker compose --env-file .env -f docker-compose.yml pull
-          docker compose --env-file .env -f docker-compose.yml up -d
-          docker compose --env-file .env -f docker-compose.yml ps
-          REMOTE
+          printf '%s' "$REGISTRY_TOKEN" | ssh -o StrictHostKeyChecking=yes -i ~/.ssh/battleship_deploy_key "$SSH_USER@$SSH_HOST" "bash /opt/battleship/incoming/${{ github.sha }}/deploy-phosrvr.sh '${{ github.sha }}' '${{ github.actor }}'"
 
       - name: Verify deployed service
+        env:
+          SSH_HOST: ${{ secrets.PHOSRVR_SSH_HOST }}
+          SSH_USER: ${{ secrets.PHOSRVR_SSH_USER }}
         run: |
-          ssh -i ~/.ssh/battleship_deploy_key "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}" <<'REMOTE'
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/battleship_deploy_key "$SSH_USER@$SSH_HOST" <<'REMOTE'
           set -uo pipefail
           for attempt in $(seq 1 120); do
-            curl -fsS http://127.0.0.1:3006/api/lobby >/tmp/battleship-lobby.json
+            curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:3006/api/lobby >/dev/null
             api_status=$?
-            curl -fsS http://127.0.0.1:3006/ >/tmp/battleship-home.html
+            curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:3006/ >/dev/null
             home_status=$?
             if [ "$api_status" -eq 0 ] && [ "$home_status" -eq 0 ]; then
               exit 0
@@ -159,8 +253,6 @@ jobs:
             sleep 3
           done
           cd /opt/battleship
-          docker compose --env-file .env -f docker-compose.yml ps
-          docker logs --tail=120 battleship-backend || true
-          docker logs --tail=120 battleship-nginx || true
+          docker compose --env-file .env -f docker-compose.phosrvr.yml ps
           exit 1
           REMOTE

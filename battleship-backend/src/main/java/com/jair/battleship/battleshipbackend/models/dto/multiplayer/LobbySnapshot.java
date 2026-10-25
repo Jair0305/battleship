@@ -4,5 +4,5 @@ import java.util.List;
 
 public record LobbySnapshot(
         List<RoomSnapshot> salas,
-        List<SessionUser> onlinePlayers) {
+        List<PublicPlayer> onlinePlayers) {
 }
