@@ -196,7 +196,8 @@ Secuencia después de confirmar:
 2. Verificar cero partidas activas (`PLACING_SHIPS`, `READY_TO_START`,
    `IN_PROGRESS`, legacy `EN_CURSO`) y cero `mesa.ready_deadline_at` pendientes.
 3. Cerrar SOLO el ingreso de Battleship en el origen con respuesta 503; cerrar
-   WS existentes y detener `battleship-backend`. Volver a comprobar los estados.
+   WS existentes y detener `battleship-backend` con `docker stop --time 60`.
+   Volver a comprobar los estados.
    Si comenzó una partida en la carrera, reabrir el origen y reprogramar el corte.
    No detener Nginx global, Alloy, Docker daemon u otros contenedores.
 4. Hacer respaldo FINAL con el mismo script y guardar `.env`, configuración y

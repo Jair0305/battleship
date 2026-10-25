@@ -40,7 +40,7 @@ if [ "$(active_games)" != 0 ]; then
   exit 1
 fi
 # No new HTTP/WS requests; stopping the backend also freezes its scheduled writes.
-docker stop battleship-backend
+docker stop --time 60 battleship-backend
 echo 'Battleship ingress is paused until the new application passes startup checks'
 backup="/opt/battleship/backups/pre-deploy-$(date -u +%Y%m%dT%H%M%SZ)-${revision:0:7}"
 python3 "$candidate/consistent-backup.py" "$backup"

@@ -26,6 +26,7 @@ services:
     platform: linux/arm64
     container_name: battleship-backend
     restart: unless-stopped
+    stop_grace_period: 60s
     mem_limit: 1g
     cpus: 1.5
     depends_on:
