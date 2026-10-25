@@ -1,8 +1,9 @@
 # Battleship: preparación de migración a phosrvr
 
 Fecha de evidencia: 2026-10-25 UTC (2026-10-24 en México).
-**Estado: preparado y probado en privado; producción todavía está en nightly-int.
-No se ha autorizado ni ejecutado el corte.**
+**Estado: candidato final preparado y probado; producción todavía está en nightly-int.
+El usuario autorizó el corte condicionado a cerrar los gates restantes; todavía
+no se ha ejecutado.**
 
 **Actualización de seguridad:** la instrucción posterior del usuario autoriza
 parches mínimos de runtimes, dependencias y código. La tabla siguiente describe
@@ -26,7 +27,18 @@ el corte y el hotfix requieren imágenes nuevas con ese cierre, nuevo CI y flujo
 El [ensayo posterior del JAR](evidence/legacy-retirement-20261025.json) pasó
 multijugador WebSocket/SockJS, bloqueo STOMP y persistencia con esquema intacto.
 La revocación se probó solo en el clon: 83 tokens anteriores rechazados, datos
-conservados y nuevos accesos válidos. Las imágenes finales siguen pendientes.
+conservados y nuevos accesos válidos.
+
+**Candidato final `7b8733c`:** CI nativo y publicación aprobados, con los ocho
+digests ligados a sus config digests escaneados. ARM64 restauró 16 tablas/2.966
+filas y terminó con 3.352 filas nuevas de ensayo. Docker Desktop AMD64 nativo
+restauró ese dump ARM con huellas idénticas y terminó con 3.737 filas. Ambas
+arquitecturas pasaron WebSocket/SockJS, rechazo de falsificación STOMP, ranking,
+privacidad, reinicio y persistencia; conservaron la revocación y el mismo esquema.
+Todos los clones quedaron detenidos. El
+[recibo final](evidence/final-candidate-20261025.json) registra los artefactos,
+respaldos y preparación de proxy fresca de las 14:49:39 UTC. Paquete de corte
+validado en `/opt/battleship/cutover/7b8733c`, sin activar configuración/marker.
 
 ## Ensayo histórico de paridad
 
@@ -343,7 +355,23 @@ Evidencia en phosrvr: `/opt/battleship/build/ci-validation-effabca.log`, contene
 detenido `battleship-ci-validation-effabca`. Esto no sustituye ni anula el fallo
 de seguridad del workflow.
 
-## Corte propuesto: REQUIERE CONFIRMACIÓN DEL USUARIO
+## Corte autorizado, condicionado a los gates restantes
+
+El hilo coordinador transmitió la autorización real del usuario alrededor de las
+14:40 UTC: **«Sí, ejecutar cuando estén verificadas las condiciones restantes»**,
+para Battleship y la ventana de 5–10 minutos, incluyendo la posible desconexión
+de WebSockets/llamadas RTC de POM durante la recarga compartida. No se vuelve a
+pedir esa misma ventana. El coordinador resuelve Chrome/Cloudflare y el GO con
+Cleanly; no se congela el origen ni se recarga/cambia DNS antes de ese GO.
+
+Estado posterior del coordinador: los cuatro diagnósticos oficiales de Chrome
+pasaron, pero el bootstrap sigue fallando antes de observar pestañas por el
+`browser-service.mjs` faltante. Soporte indicó reinstalar Browser desde la UI;
+el usuario ya fue informado. No se interpreta como logout, no se usa T3 como
+alternativa ni se repara el host manualmente. No hay baseline Cloudflare ni GO.
+La decisión específica sobre los 22 MEDIUM/16 LOW sin fix también está pendiente;
+la aprobación operativa no equivale a aceptar ese residual. Origen activo,
+clones detenidos y locks liberados mientras se completan esos pasos.
 
 Interrupción estimada: **5–10 minutos** para escrituras y reconexión de sesiones;
 puede alargarse si Cloudflare o certificados tardan. Buscar una ventana sin
@@ -361,13 +389,12 @@ Condiciones previas pendientes:
    valida nueva configuración completa preservando todas las rutas existentes.
    Resolver TLS para este dominio y continuidad de las sesiones RTC vecinas
    durante la recarga antes de cerrar ingreso o habilitar tráfico al destino.
-3. Commit y paquete revisados; respaldo e imágenes ARM64 existentes disponibles.
-   Auditoría y CI del candidato corregido aprobados, sin omitir el gate.
-4. Confirmación explícita del usuario para este corte.
-5. Cerrar los bloqueos de aplicación descritos en el documento de seguridad:
-   validar el retiro de API legacy autorizado y preparar la revocación de las
-   sesiones expuestas. Publicar y probar las nuevas imágenes ARM64/AMD64 con ese
-   retiro y bloqueo STOMP; no promover las imágenes anteriores de `f9eaa42`.
+3. Revalidar que los artefactos siguen siendo los ocho digests de `7b8733c`
+   ya publicados, escaneados y probados, sin omitir el gate. `f9eaa42` es histórico.
+4. Disposición del residual Ubuntu sin fix documentado en seguridad; no declararlo
+   corregido ni aceptar riesgo por omisión. La autorización de ventana ya llegó.
+5. Revocación real durante el corte, conservando datos y usando el SQL ensayado;
+   retiro legacy y bloqueo STOMP están cerrados en el candidato final.
 
 Secuencia después de confirmar:
 
@@ -448,7 +475,7 @@ de los contenedores originales de Battleship permite reabrir sin tocar datos.
 
 - Restablecer acceso técnico a Cloudflare, confirmar cuenta/zona y autorizar el
   corte; instalar la hoja mediante Cleanly y verificar producción públicamente.
-- Conservar evidencia de auditoría y CI aprobados del candidato corregido.
+- Conservar la evidencia final aprobada de `7b8733c` y del corte real.
 - Acordar ventana de rollback, retención y respaldo automático off-host.
 - Después de esa ventana, retirar únicamente recursos/secretos/claves/rutas
   demostrados exclusivos de Battleship. No borrar nada durante esta preparación.

@@ -11,11 +11,17 @@ revocación de sesiones ni hotfix de producción.**
 El candidato de runtimes `f9eaa42` pasó CI y los ensayos ARM64/AMD64 descritos
 abajo, con cero HIGH/CRITICAL en sus imágenes. El usuario autorizó después retirar
 la API antigua: el candidato actual añade ese retiro y el bloqueo de publicaciones
-STOMP de clientes. Requiere nuevo CI, artefactos y flujos antes de promoverlo;
-las imágenes anteriores no contienen este cierre. Los tokens emitidos antes del
+STOMP de clientes. El candidato final `7b8733c` pasó nuevo CI/publicación y
+flujos de las imágenes exactas ARM64/AMD64; las imágenes anteriores no contienen
+este cierre. Los tokens emitidos antes del
 parche se revocarán durante el corte. El usuario confirmó que todas las cuentas
 son de prueba y no requieren recuperación individual; se conservan datos y
 respaldos. No se acepta riesgo en nombre del usuario.
+
+El usuario autorizó la ventana condicionada de 5–10 minutos y posible reconexión
+RTC/POM; el coordinador gestiona Cloudflare y el GO con Cleanly. No falta pedir
+esa misma ventana: faltan sus condiciones operativas y el tratamiento del
+residual documentado. Véase el [recibo final](../migration/evidence/final-candidate-20261025.json).
 
 Se preservan `/opt/battleship`, únicamente los binds de aplicación
 `127.0.0.1:3006/3007`, backups y artefactos originales. El TLS de prueba corre
@@ -294,7 +300,19 @@ consistentes antes/después y el mismo hash de esquema. Se conservan los intento
 fallidos: una expectativa incorrecta de top diez y permisos del archivo de
 prueba se corrigieron antes de este ensayo completo. El
 [recibo del cierre](../migration/evidence/legacy-retirement-20261025.json)
-distingue estas pruebas de la publicación/escaneo todavía pendientes.
+distingue estas pruebas del ensayo posterior de las imágenes finales.
+
+La publicación final `40197918658` aprobó `7b8733c` en ARM64 y AMD64, sin deploy.
+Se cotejaron los ocho manifests por digest con el config digest de cada reporte
+escaneado. Después, las imágenes exactas restauraron y probaron 16 tablas:
+ARM64 de 2.966 a 3.352 filas; su dump con escrituras nuevas se restauró con huellas
+idénticas en Docker Desktop AMD64 nativo, de 3.352 a 3.737 filas de ensayo.
+Ambos pasaron WS/SockJS/ranking/chat/privacidad y rechazo de publicaciones
+falsificadas, reinicio y hash/sesión. Se conserva la revocación anterior y el hash
+de esquema `8110579202dbb1f6337e3c96ae2517bb18e04f5e8fbf4c51dc2d76f1a8271ecc`.
+Los clones están detenidos. No se consumió la RAM escasa de nightly-int ni se
+alteraron servicios vecinos para el ensayo AMD64. Los reportes finales mantienen
+cero HIGH/CRITICAL y el residual Ubuntu conocido; no se afirma cero vulnerabilidades.
 
 La comprobación posterior al fallo de transporte SSH encontró íntegro y estable
 el archivo ARM64 de recuperación anterior: mismo SHA256 y CRC gzip válido,
