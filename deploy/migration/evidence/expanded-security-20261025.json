@@ -1,0 +1,628 @@
+{
+  "utc": "2026-10-25T06:53:26.136179+00:00",
+  "production_cutover_performed": false,
+  "production_hotfix_performed": false,
+  "dns_changed": false,
+  "shared_proxy_reloaded": false,
+  "sessions_revoked": false,
+  "ci_state": "pending new commits",
+  "images": [
+    {
+      "reference": "battleship-backend:expanded-security-r5-20261025",
+      "id": "sha256:d7cd42453e3959a66afb96228a4cee443f6aebb99c1b112f6dd1e171062aa2fa",
+      "architecture": "arm64",
+      "scan_sha256": "47c9c9cf2f3c69c8c6dc38c6e67c07313e2964dbd27667a57c8ed535bfc9fe80",
+      "sbom_sha256": "86934daa9ce3a9ffbc1b7cd23b456f18cf3c842b684eda45635f0962373b7299",
+      "finding_counts": {
+        "MEDIUM": 22,
+        "LOW": 16
+      }
+    },
+    {
+      "reference": "battleship-frontend:expanded-security-20261025",
+      "id": "sha256:6ece578a9a48dbd3cf1011074d318c890d08d5cf60b585cad2873a7de883c592",
+      "architecture": "arm64",
+      "scan_sha256": "3f49596fa5fda750d545d30236a919d7a5ba532754fe56ff049c3f336e1c1d62",
+      "sbom_sha256": "2db1856c55870ddc849c2e45dead8fdde7386d2b98ae6333536af51cc376ed8b",
+      "finding_counts": {}
+    },
+    {
+      "reference": "battleship-db:security-r2-20261025",
+      "id": "sha256:8d2f05ebcd9ecca18927f9b4d7b7e82ca5b28ac41fe632fd6701d4932e324848",
+      "architecture": "arm64",
+      "scan_sha256": "eb3e08145f782511654d37369da32cc3574adecf042a3470bdfada98e0a8242f",
+      "sbom_sha256": "8d40576b917b194b7de7baff4cd9f7d5eae45e14435b3097f3aef53de1349b9d",
+      "finding_counts": {}
+    },
+    {
+      "reference": "battleship-nginx:security-20261025",
+      "id": "sha256:27f7a2a464ef79ad64a27413cc93270b611c9ab214ddcc5ab9150b95e286dd69",
+      "architecture": "arm64",
+      "scan_sha256": "94f2bc1f265998146aa7515ca5bc1fcc9414f4a04d8623ed2a3d7cb157d4ec03",
+      "sbom_sha256": "3d6c51efaa8b335aa8d96bf12075d3737955cc996f39e4c4fef0ef8c16e5b89c",
+      "finding_counts": {}
+    }
+  ],
+  "remaining_findings": {
+    "CVE-2026-102473": {
+      "severity": "MEDIUM",
+      "title": "dash: dash: Super-polynomial backtracking in pmatch when libc fnmatch is disabled",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-102473",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "dash",
+          "version": "0.5.11+git20210903+057cd650a4ed-3build1"
+        }
+      ]
+    },
+    "CVE-2026-102474": {
+      "severity": "MEDIUM",
+      "title": "dash: dash: Heap out-of-bounds write in conv_escape via undersized Unicode escape reservation",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-102474",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "dash",
+          "version": "0.5.11+git20210903+057cd650a4ed-3build1"
+        }
+      ]
+    },
+    "CVE-2022-27943": {
+      "severity": "LOW",
+      "title": "binutils: libiberty/rust-demangle.c in GNU GCC 11.2 allows stack exhaustion in demangle_const",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2022-27943",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "gcc-12-base",
+          "version": "12.3.0-1ubuntu1~22.04.3"
+        },
+        {
+          "name": "libgcc-s1",
+          "version": "12.3.0-1ubuntu1~22.04.3"
+        },
+        {
+          "name": "libstdc++6",
+          "version": "12.3.0-1ubuntu1~22.04.3"
+        }
+      ]
+    },
+    "CVE-2026-18374": {
+      "severity": "MEDIUM",
+      "title": "glibc: glibc: Heap buffer overflow via attacker-controlled fopen mode string",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-18374",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libc-bin",
+          "version": "2.35-0ubuntu3.15"
+        },
+        {
+          "name": "libc6",
+          "version": "2.35-0ubuntu3.15"
+        }
+      ]
+    },
+    "CVE-2026-89092": {
+      "severity": "MEDIUM",
+      "title": "glibc: nscd stack overflow leads to degraded DNS resolution",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-89092",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libc-bin",
+          "version": "2.35-0ubuntu3.15"
+        },
+        {
+          "name": "libc6",
+          "version": "2.35-0ubuntu3.15"
+        }
+      ]
+    },
+    "CVE-2025-66382": {
+      "severity": "MEDIUM",
+      "title": "libexpat: libexpat: Denial of service via crafted file processing",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2025-66382",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libexpat1",
+          "version": "2.4.7-1ubuntu0.9"
+        }
+      ]
+    },
+    "CVE-2026-67693": {
+      "severity": "MEDIUM",
+      "title": "gnutls: gnutls: Information disclosure via contradictory Key Usage and Extended Key Usage extensions",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-67693",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libgnutls30",
+          "version": "3.7.3-4ubuntu1.9"
+        }
+      ]
+    },
+    "CVE-2026-88647": {
+      "severity": "MEDIUM",
+      "title": "gnutls: gnutls: Information disclosure via hostname verification bypass",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-88647",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libgnutls30",
+          "version": "3.7.3-4ubuntu1.9"
+        }
+      ]
+    },
+    "CVE-2026-88648": {
+      "severity": "MEDIUM",
+      "title": "gnutls: gnutls: Cross-domain certificate restriction bypass via incomplete X.509 validation",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-88648",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libgnutls30",
+          "version": "3.7.3-4ubuntu1.9"
+        }
+      ]
+    },
+    "CVE-2026-95184": {
+      "severity": "MEDIUM",
+      "title": "gnutls: gnutls: legitimate user certificates incorrectly rejected causing denial of service",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-95184",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libgnutls30",
+          "version": "3.7.3-4ubuntu1.9"
+        }
+      ]
+    },
+    "CVE-2026-95209": {
+      "severity": "MEDIUM",
+      "title": "gnutls: gnutls: legitimate CA certificates incorrectly rejected causing denial of service",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-95209",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libgnutls30",
+          "version": "3.7.3-4ubuntu1.9"
+        }
+      ]
+    },
+    "CVE-2026-95210": {
+      "severity": "MEDIUM",
+      "title": "gnutls: gnutls: certificates with invalid extensions incorrectly accepted",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-95210",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libgnutls30",
+          "version": "3.7.3-4ubuntu1.9"
+        }
+      ]
+    },
+    "CVE-2023-50495": {
+      "severity": "LOW",
+      "title": "ncurses: segmentation fault via _nc_wrap_entry()",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2023-50495",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libncurses6",
+          "version": "6.3-2ubuntu0.3"
+        },
+        {
+          "name": "libncursesw6",
+          "version": "6.3-2ubuntu0.3"
+        },
+        {
+          "name": "libtinfo6",
+          "version": "6.3-2ubuntu0.3"
+        },
+        {
+          "name": "ncurses-base",
+          "version": "6.3-2ubuntu0.3"
+        },
+        {
+          "name": "ncurses-bin",
+          "version": "6.3-2ubuntu0.3"
+        }
+      ]
+    },
+    "CVE-2026-103111": {
+      "severity": "MEDIUM",
+      "title": "pcre2: pcre2: Out-of-bounds write via crafted regular expression",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-103111",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libpcre2-8-0",
+          "version": "10.39-3ubuntu0.1"
+        }
+      ]
+    },
+    "CVE-2026-86145": {
+      "severity": "MEDIUM",
+      "title": "pcre2: PCRE2: Out-of-bounds write allows arbitrary code execution via crafted regular expressions",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-86145",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libpcre2-8-0",
+          "version": "10.39-3ubuntu0.1"
+        }
+      ]
+    },
+    "CVE-2026-89156": {
+      "severity": "MEDIUM",
+      "title": "PCRE2: PCRE2: Out-of-bounds read via invalid UTF data during JIT fallback",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-89156",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libpcre2-8-0",
+          "version": "10.39-3ubuntu0.1"
+        }
+      ]
+    },
+    "CVE-2026-89157": {
+      "severity": "MEDIUM",
+      "title": "pcre2: PCRE2: Out-of-bounds write via large pattern input",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-89157",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libpcre2-8-0",
+          "version": "10.39-3ubuntu0.1"
+        }
+      ]
+    },
+    "CVE-2026-89158": {
+      "severity": "MEDIUM",
+      "title": "PCRE2: PCRE2: Out-of-bounds write via integer overflow on 32-bit platforms",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-89158",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libpcre2-8-0",
+          "version": "10.39-3ubuntu0.1"
+        }
+      ]
+    },
+    "CVE-2026-89160": {
+      "severity": "MEDIUM",
+      "title": "pcre2: PCRE2: Denial of Service via out-of-bounds read during invalid UTF matching",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-89160",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libpcre2-8-0",
+          "version": "10.39-3ubuntu0.1"
+        }
+      ]
+    },
+    "CVE-2026-89161": {
+      "severity": "MEDIUM",
+      "title": "pcre2: PCRE2: Memory corruption vulnerability in pcre2_jit_match",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-89161",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libpcre2-8-0",
+          "version": "10.39-3ubuntu0.1"
+        }
+      ]
+    },
+    "CVE-2022-41409": {
+      "severity": "LOW",
+      "title": "pcre2: negative repeat value in a pcre2test subject line leads to inifinite loop",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2022-41409",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libpcre2-8-0",
+          "version": "10.39-3ubuntu0.1"
+        }
+      ]
+    },
+    "CVE-2026-40228": {
+      "severity": "LOW",
+      "title": "systemd: systemd-journald: Unintended output to user terminals via logger command",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-40228",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libsystemd0",
+          "version": "249.11-0ubuntu3.22"
+        },
+        {
+          "name": "libudev1",
+          "version": "249.11-0ubuntu3.22"
+        }
+      ]
+    },
+    "CVE-2022-4899": {
+      "severity": "LOW",
+      "title": "zstd: mysql: buffer overrun in util.c",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2022-4899",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "libzstd1",
+          "version": "1.4.8+dfsg-3build1"
+        }
+      ]
+    },
+    "CVE-2023-29383": {
+      "severity": "LOW",
+      "title": "shadow: Improper input validation in shadow-utils package utility chfn",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2023-29383",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "login",
+          "version": "1:4.8.1-2ubuntu2.2"
+        },
+        {
+          "name": "passwd",
+          "version": "1:4.8.1-2ubuntu2.2"
+        }
+      ]
+    },
+    "CVE-2024-56433": {
+      "severity": "LOW",
+      "title": "shadow-utils: Default subordinate ID configuration in /etc/login.defs could lead to compromise",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2024-56433",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "login",
+          "version": "1:4.8.1-2ubuntu2.2"
+        },
+        {
+          "name": "passwd",
+          "version": "1:4.8.1-2ubuntu2.2"
+        }
+      ]
+    },
+    "CVE-2026-18477": {
+      "severity": "MEDIUM",
+      "title": "tar: tar: TOCTOU in incremental dumpdir 'X' rename handling allows restore path escape",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-18477",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "tar",
+          "version": "1.34+dfsg-1ubuntu0.1.22.04.6"
+        }
+      ]
+    },
+    "CVE-2026-18508": {
+      "severity": "MEDIUM",
+      "title": "tar: tar: --one-top-level hardlink targets not confined to top-level directory enabling arbitrary file overwrite",
+      "fixed_version": "",
+      "vendor_reference": "https://ubuntu.com/security/CVE-2026-18508",
+      "status": "open; not accepted or suppressed",
+      "packages": [
+        {
+          "name": "tar",
+          "version": "1.34+dfsg-1ubuntu0.1.22.04.6"
+        }
+      ]
+    }
+  },
+  "baseline_scan_counts": {
+    "baseline-database.trivy.json": {
+      "sha256": "be3cd9da7fc2b2a385a9e55bab5399097b206fbee772d96f29f83e637b63b945",
+      "finding_counts": {
+        "HIGH": 34,
+        "MEDIUM": 39,
+        "LOW": 15,
+        "UNKNOWN": 3,
+        "CRITICAL": 1
+      }
+    },
+    "baseline-proxy.trivy.json": {
+      "sha256": "ecf22734b1a8a05f724c5ab3920031aea44303e55c0df5b57d554d6d4c556364",
+      "finding_counts": {
+        "HIGH": 58,
+        "MEDIUM": 100,
+        "LOW": 46,
+        "UNKNOWN": 6,
+        "CRITICAL": 2
+      }
+    },
+    "baseline-backend.trivy.json": {
+      "sha256": "ae4379d22158dcd71ab1a2e9ef0dcf84950b5c2480a1b13eb73145baf4c1905b",
+      "finding_counts": {
+        "MEDIUM": 102,
+        "LOW": 56,
+        "HIGH": 34,
+        "CRITICAL": 8
+      }
+    },
+    "baseline-frontend.trivy.json": {
+      "sha256": "33d31b07a6b801f73c47c607eeecbb804efcdf8e8ef45aa77b364083b2e2c3b3",
+      "finding_counts": {
+        "HIGH": 15,
+        "MEDIUM": 20,
+        "LOW": 13,
+        "UNKNOWN": 2,
+        "CRITICAL": 1
+      }
+    }
+  },
+  "baseline_scan_note": "Frontend baseline was the npm-fixed intermediate candidate, not original production; other baseline images were the initial ARM reproduction.",
+  "jar": {
+    "sha256": "92df6737f368a0b7dcf754440cb1cf0bdb18d2b31d748839e045cb88f72a1758",
+    "libraries": [
+      "HikariCP-7.0.2.jar",
+      "angus-activation-2.0.3.jar",
+      "antlr4-runtime-4.13.2.jar",
+      "aspectjweaver-1.9.25.1.jar",
+      "byte-buddy-1.17.8.jar",
+      "checker-qual-3.55.1.jar",
+      "classmate-1.7.3.jar",
+      "commons-logging-1.3.6.jar",
+      "h2-2.4.240.jar",
+      "hibernate-core-7.2.25.Final.jar",
+      "hibernate-models-1.0.1.jar",
+      "istack-commons-runtime-4.1.2.jar",
+      "jackson-annotations-2.21.jar",
+      "jackson-core-3.1.8.jar",
+      "jackson-databind-3.1.8.jar",
+      "jakarta.activation-api-2.1.4.jar",
+      "jakarta.annotation-api-3.0.0.jar",
+      "jakarta.inject-api-2.0.1.jar",
+      "jakarta.persistence-api-3.2.0.jar",
+      "jakarta.transaction-api-2.0.1.jar",
+      "jakarta.xml.bind-api-4.0.5.jar",
+      "jaxb-core-4.0.9.jar",
+      "jaxb-runtime-4.0.9.jar",
+      "jboss-logging-3.6.3.Final.jar",
+      "jspecify-1.0.1.jar",
+      "jul-to-slf4j-2.0.20.jar",
+      "log4j-api-2.25.5.jar",
+      "log4j-to-slf4j-2.25.5.jar",
+      "logback-classic-1.5.38.jar",
+      "logback-core-1.5.38.jar",
+      "micrometer-commons-1.16.8.jar",
+      "micrometer-observation-1.16.8.jar",
+      "postgresql-42.7.14.jar",
+      "slf4j-api-2.0.20.jar",
+      "snakeyaml-2.5.jar",
+      "spring-aop-7.0.10.jar",
+      "spring-aspects-7.0.10.jar",
+      "spring-beans-7.0.10.jar",
+      "spring-boot-4.0.9.jar",
+      "spring-boot-autoconfigure-4.0.9.jar",
+      "spring-boot-data-commons-4.0.9.jar",
+      "spring-boot-data-jpa-4.0.9.jar",
+      "spring-boot-hibernate-4.0.9.jar",
+      "spring-boot-http-converter-4.0.9.jar",
+      "spring-boot-jackson-4.0.9.jar",
+      "spring-boot-jarmode-tools-4.0.9.jar",
+      "spring-boot-jdbc-4.0.9.jar",
+      "spring-boot-jpa-4.0.9.jar",
+      "spring-boot-persistence-4.0.9.jar",
+      "spring-boot-servlet-4.0.9.jar",
+      "spring-boot-sql-4.0.9.jar",
+      "spring-boot-tomcat-4.0.9.jar",
+      "spring-boot-transaction-4.0.9.jar",
+      "spring-boot-web-server-4.0.9.jar",
+      "spring-boot-webmvc-4.0.9.jar",
+      "spring-boot-websocket-4.0.9.jar",
+      "spring-context-7.0.10.jar",
+      "spring-core-7.0.10.jar",
+      "spring-data-commons-4.0.8.jar",
+      "spring-data-jpa-4.0.8.jar",
+      "spring-expression-7.0.10.jar",
+      "spring-jdbc-7.0.10.jar",
+      "spring-messaging-7.0.10.jar",
+      "spring-orm-7.0.10.jar",
+      "spring-security-crypto-7.0.8.jar",
+      "spring-tx-7.0.10.jar",
+      "spring-web-7.0.10.jar",
+      "spring-webmvc-7.0.10.jar",
+      "spring-websocket-7.0.10.jar",
+      "tomcat-embed-core-11.0.27.jar",
+      "tomcat-embed-el-11.0.27.jar",
+      "tomcat-embed-websocket-11.0.27.jar",
+      "txw2-4.0.9.jar"
+    ],
+    "mssql_absent": true,
+    "jackson2_databind_absent": true
+  },
+  "scanner_version": "Version: 0.76.1\nVulnerability DB:\n  Version: 2\n  UpdatedAt: 2026-10-25 01:20:33.190884269 +0000 UTC\n  NextUpdate: 2026-10-26 01:20:33.190871941 +0000 UTC\n  DownloadedAt: 2026-10-25 06:10:25.823521512 +0000 UTC\nJava DB:\n  Version: 1\n  UpdatedAt: 2026-10-25 00:59:20.065031654 +0000 UTC\n  NextUpdate: 2026-10-28 00:59:20.065031063 +0000 UTC\n  DownloadedAt: 2026-10-25 06:11:11.263475908 +0000 UTC\n",
+  "rsc_verification": {
+    "next": "16.4.1",
+    "variants": [
+      "react-server-dom-turbopack",
+      "react-server-dom-turbopack-experimental",
+      "react-server-dom-webpack",
+      "react-server-dom-webpack-experimental"
+    ],
+    "files": 116,
+    "official_tarball_sha256": "2e5dc3186f842e4871b99aa2b8dedb80677a823f8628b37b46de024f38cf8906",
+    "bundle_manifest_sha256": "17029032070ad90a321db1e8a998d2944341edccaa6461c5a060d9e735964022",
+    "status": "matches-official-lockfile-artifact"
+  },
+  "java_trust": {
+    "source_actual_amd64_accepted_chains": 7,
+    "source_actual_amd64_total_chains": 14,
+    "candidate_default_trust_accepted_chains": 0,
+    "candidate_default_trust_total_chains": 14,
+    "offline_fixture_control_accepted_without_blocks": 14,
+    "offline_fixture_control_rejected_with_blocks": 14,
+    "normal_https_control": "passed",
+    "explicit_blocked_fingerprints": 16,
+    "log_sha256": "fba23c018568726a9d5653c19a1c0df6d1b37050aa63b2caa5a46a610a713981"
+  },
+  "checks": {
+    "backend_unit_tests": 22,
+    "backend_unit_failures": 0,
+    "linux_security_guard_tests": 5,
+    "typescript": "passed",
+    "anonymous_lobby_no_credentials": "passed; registered and guest sessions",
+    "http_websocket_game": "passed",
+    "tls_sockjs_ranked_game": "passed; rating, wins and losses exactly once",
+    "scheduler_persisted_deadline_after_restart": "passed without HTTP trigger",
+    "full_stack_restart": "passed with 1243 rows before public DTO correction",
+    "original_hashes_and_sessions": "passed including 72-byte UTF8",
+    "schema_unchanged": true,
+    "new_candidate_final_tables": 16,
+    "new_candidate_final_rows": 1622,
+    "inverse_amd64_tables": 16,
+    "inverse_amd64_rows": 1243,
+    "inverse_amd64_fingerprints_equal": true,
+    "inverse_amd64_private_session_lobby_ranking": "passed; guest games intentionally had no Elo",
+    "inverse_image_scope": "original AMD software only in isolated private clone; patched AMD functional gate pending CI artifact"
+  },
+  "backups": {
+    "arm64_image_archive_path": "/opt/battleship/backups/expanded-security-arm64-20261025.tar.gz",
+    "arm64_image_archive_sha256": "44106585dd0a5e9d2fa12ab187849d3253ae645381bf84416bf23cd9c9995563",
+    "arm64_image_archive_gzip_integrity": "passed; archive restore not repeated",
+    "source_recent_snapshot_archive_sha256": "c5a2fd843561e99b4b54d9c5bc17e9c377df78f6681d357d007e15d4e8f81ae6",
+    "inverse_snapshot_archive_sha256": "a4295706c52c611ff56fe7696a50d2895a3c46cd47c7875c5dbac9b113a5ff0f",
+    "final_candidate_snapshot_path": "/opt/battleship/security/20261025/clone-r5-final-writes",
+    "final_candidate_snapshot_manifest_sha256": "c966da1e365db2b1840b40c4ff9a3e5751463b3da066d44c3e48dde10657ada2"
+  },
+  "application_open_gates": [
+    "legacy ID-only APIs await retirement/authorization choice",
+    "previously exposed production tokens require revocation: 1 registered account, 7 sessions; not executed",
+    "legacy password over 72 UTF8 bytes may need verified recovery; cannot infer from hashes",
+    "unfixed Ubuntu medium/low findings remain open",
+    "new CI and patched AMD64 functional artifact test pending",
+    "Cloudflare account/zone, coordinated ingress, and production-cutover approval pending"
+  ],
+  "schema_normalized_sha256": "fe8914f91dd358553267580c71605245732526683947d9dcd51e7ad10ad17937"
+}

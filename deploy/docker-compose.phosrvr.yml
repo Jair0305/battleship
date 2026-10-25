@@ -2,7 +2,7 @@ name: battleship
 
 services:
   db:
-    image: postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    image: ${DATABASE_IMAGE:?Patched PostgreSQL image is required}
     platform: linux/arm64
     container_name: battleship-db
     restart: unless-stopped
@@ -39,7 +39,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SPRING_H2_CONSOLE_ENABLED: "false"
       APP_ALLOWED_ORIGIN_PATTERNS: "http://battleship.nightly.mx,http://battleship.nightly.mx:3006,https://battleship.nightly.mx,http://54.204.174.207:3006,http://localhost:3006,http://localhost:3000,http://localhost:3001,http://localhost:3002"
       JAVA_OPTS: -XX:MaxRAMPercentage=75.0
@@ -60,7 +60,7 @@ services:
     networks: [battleship]
 
   nginx:
-    image: nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+    image: ${PROXY_IMAGE:?Patched Nginx image is required}
     platform: linux/arm64
     container_name: battleship-nginx
     restart: unless-stopped

@@ -4,7 +4,14 @@ Fecha de evidencia: 2026-10-25 UTC (2026-10-24 en México).
 **Estado: preparado y probado en privado; producción todavía está en nightly-int.
 No se ha autorizado ni ejecutado el corte.**
 
-## Versión conservada
+**Actualización de seguridad:** la instrucción posterior del usuario autoriza
+parches mínimos de runtimes, dependencias y código. La tabla siguiente describe
+el ensayo de paridad histórico, no el candidato actual. El candidato de corte
+debe ser el parcheado, documentado en [seguridad](../security/README.md), con CI
+aprobado y los bloqueos de aplicación resueltos. El JAR congelado y las imágenes
+originales se conservan exclusivamente como baseline/recuperación privada.
+
+## Ensayo histórico de paridad
 
 | Componente | Producción AMD64 | Preparación ARM64 |
 | --- | --- | --- |
@@ -75,7 +82,8 @@ RAM disponibles al empezar. La reserva está en
 - `/opt/battleship`, red Docker `battleship`, sin subred fija compartida.
 - Nginx de aplicación: **solo `127.0.0.1:3006`**; backend: **solo `127.0.0.1:3007`**.
 - PostgreSQL: sin puerto publicado. No se abrió firewall ni servicio interno.
-- Prueba TLS aislada: `127.0.0.1:9444`, contenedor `battleship-tls-preflight`.
+- El ensayo TLS inicial usó `127.0.0.1:9444` y quedó detenido. El candidato de
+  seguridad prueba TLS dentro de su red exclusiva, sin otro puerto host.
 - Moonlight reserva 3334/3335/9443, sin conflicto.
 - Límites de memoria/CPU por servicio en `docker-compose.phosrvr.yml`; builder
   exclusivo `battleship-migration`, con 4 GiB y 1.5 CPU como máximo.
@@ -323,8 +331,9 @@ de seguridad del workflow.
 Interrupción estimada: **5–10 minutos** para escrituras y reconexión de sesiones;
 puede alargarse si Cloudflare o certificados tardan. Buscar una ventana sin
 partidas activas; no forzar a terminar juegos. Usar el frontend corregido y
-verificado tras la autorización de dependencias; conservar el JAR original del
-backend. Revalidar la versión que sigue sirviendo el origen antes del corte.
+verificado tras la autorización de dependencias y el backend recompilado con los
+parches de seguridad. Conservar el JAR original como artefacto histórico, sin
+promoverlo. Revalidar la versión que sigue sirviendo el origen antes del corte.
 
 Condiciones previas pendientes:
 
@@ -338,6 +347,9 @@ Condiciones previas pendientes:
 3. Commit y paquete revisados; respaldo e imágenes ARM64 existentes disponibles.
    Auditoría y CI del candidato corregido aprobados, sin omitir el gate.
 4. Confirmación explícita del usuario para este corte.
+5. Resolver los bloqueos de aplicación descritos en el documento de seguridad:
+   API legacy, sesiones previamente expuestas y recuperación de acceso. Preparar
+   y probar también las imágenes AMD64 parcheadas para hotfix/rollback.
 
 Secuencia después de confirmar:
 
@@ -355,7 +367,10 @@ Secuencia después de confirmar:
 5. En phosrvr, crear `battleship_postgres_data` NUEVO, restaurar el dump FINAL,
    comparar huellas antes de iniciar backend y revisar secuencias/propietarios.
    Conservar el volumen preflight. No restaurar sobre el volumen original del origen.
-6. Iniciar imágenes ARM64 verificadas; probar sesión existente y datos históricos
+   Aplicar la revocación de sesiones expuestas acordada con el usuario en la base
+   que será autoridad, conservando filas/relaciones e historial. Verificar que los
+   tokens anteriores fallen y el nuevo login funcione; no registrar sus valores.
+6. Iniciar imágenes ARM64 verificadas; probar nuevo login y datos históricos
    sin publicar tokens. Probar ingreso, API/WS y TLS del dominio por la ruta
    acordada. No ejecutar smoke de escritura contra datos reales sin marcar las
    cuentas/mesa de prueba y dejar constancia.
@@ -382,15 +397,16 @@ Secuencia después de confirmar:
 **No basta volver el DNS a la base vieja.** Después de abrir phosrvr, esa base
 ya no contiene las escrituras más recientes.
 
-- Antes de abrir escrituras en phosrvr: dejar su ingreso cerrado, arrancar los
-  contenedores originales de Battleship en nightly-int y restaurar su ruta/DNS
-  anterior. La base original sigue siendo la autoridad; no se borró ni restauró.
+- Antes de abrir escrituras en phosrvr: dejar su ingreso cerrado y reabrir en
+  nightly-int el candidato AMD64 parcheado y probado, usando la base que sea
+  autoridad y conservando la revocación acordada. No reexponer por defecto las
+  imágenes originales vulnerables. La base original no se borró ni restauró.
 - Después de abrir escrituras en phosrvr: bloquear su ingreso HTTP/WS, desactivar
   su despliegue CI/timer y detener backend. Exportar un nuevo dump consistente
   de **phosrvr**. Conservar su volumen y todos sus respaldos.
 - Transferir ese dump al origen, crear una base/volumen de recuperación NUEVOS y
   restaurar verificando huellas, secuencias y propietarios. Usar las imágenes
-  AMD64 originales conservadas; crear un stack de recuperación de Battleship
+  AMD64 parcheadas y verificadas; crear un stack de recuperación de Battleship
   con nombres/red propios y puerto loopback libre, preservando el stack original.
 - Con ambos ingresos cerrados, validar la recuperación. Cambiar exclusivamente
   la ruta/DNS de Battleship y abrir solo el stack de recuperación. phosrvr sigue

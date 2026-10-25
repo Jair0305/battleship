@@ -1,6 +1,8 @@
 // Destructive only to the explicitly selected test environment. Never prints session tokens.
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
+import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
 
 const base = process.argv[2]?.replace(/\/$/, '');
 if (!base || !process.argv.includes('--allow-test-writes')) {
@@ -8,6 +10,7 @@ if (!base || !process.argv.includes('--allow-test-writes')) {
 }
 const sockets = [];
 const checks = [];
+const polling = process.argv.includes('--sockjs-polling');
 function passed(check) { checks.push(check); console.log('PASS ' + check); }
 async function api(path, token, body, expected = 200) {
   const response = await fetch(base + '/api' + path, {
@@ -20,7 +23,9 @@ async function api(path, token, body, expected = 200) {
   return response.json();
 }
 async function stomp() {
-  const ws = new WebSocket(base.replace(/^http/, 'ws') + '/ws/websocket');
+  const ws = polling
+    ? new (createRequire(resolve('package.json'))('sockjs-client'))(base + '/ws', null, { transports: ['xhr-polling'] })
+    : new WebSocket(base.replace(/^http/, 'ws') + '/ws/websocket');
   sockets.push(ws);
   const inbox = [];
   ws.addEventListener('message', e => inbox.push(String(e.data)));
@@ -53,10 +58,17 @@ try {
   const a = await api('/auth/login', null, { username, password });
   assert.equal((await api('/session/me', a.token)).displayName, username);
   await api('/session/me', 'invalid-migration-token', undefined, 401);
-  const b = await api('/session/guest', null, { displayName: 'Migration B ' + suffix });
+  const ranked = process.argv.includes('--ranked');
+  const b = ranked
+    ? await api('/auth/register', null, { username: username + '_b', password, passwordConfirm: password })
+    : await api('/session/guest', null, { displayName: 'Migration B ' + suffix });
   const spectator = await api('/session/guest', null, { displayName: 'Migration S ' + suffix });
   passed('registration, password login, persisted session, rejected invalid session, guests');
   const lobby = await api('/lobby', a.token);
+  const publicLobby = await api('/lobby');
+  for (const visible of publicLobby.onlinePlayers) assert.ok(!('token' in visible));
+  assert.ok(!JSON.stringify(publicLobby).includes(a.token));
+  assert.ok(!JSON.stringify(publicLobby).includes(b.token));
   assert.ok(lobby.salas.length > 0);
   let table = await api(`/salas/${lobby.salas[0].id}/mesas`, a.token, { name: 'Migration ' + suffix });
   const path = `/mesas/${table.id}`;
@@ -74,7 +86,7 @@ try {
   await Promise.all(clients.map(c => c.waitFor(frame => frame.startsWith('MESSAGE') && frame.includes(chat))));
   await new Promise(resolve => setTimeout(resolve, 200));
   assert.ok(clients.every(c => c.inbox.filter(frame => frame.includes(chat)).length === 0));
-  passed('WebSocket upgrade, STOMP subscriptions, chat delivered once to two players and spectator');
+  passed((polling ? 'SockJS XHR polling' : 'WebSocket upgrade') + ', STOMP subscriptions, chat delivered once to two players and spectator');
   await api(path + '/ready', a.token, {});
   table = await api(path + '/ready', b.token, {});
   assert.equal(table.estado, 'PLACING_SHIPS');
@@ -97,6 +109,15 @@ try {
   assert.equal(table.estado, 'FINISHED');
   assert.ok(table.ganadorId);
   passed('seats, ready, full fleet placement, spectator privacy, shots, sunk ships and victory');
+  if (ranked) {
+    const ranking = await api('/ranking/historico');
+    const players = [username, username + '_b'].map(name => ranking.find(player => player.nombre === name));
+    assert.ok(players.every(player => player && player.gamesPlayed === 1));
+    assert.equal(players.reduce((sum, player) => sum + player.wins, 0), 1);
+    assert.equal(players.reduce((sum, player) => sum + player.losses, 0), 1);
+    assert.ok(players.every(player => player.puntos !== 1200));
+    passed('ranked victory updates both registered players once, rating, wins and losses');
+  }
   await api(path + '/rematch', a.token, {});
   table = await api(path + '/rematch', b.token, {});
   assert.equal(table.estado, 'PLACING_SHIPS');
