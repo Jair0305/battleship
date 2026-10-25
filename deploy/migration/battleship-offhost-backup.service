@@ -1,0 +1,36 @@
+[Unit]
+Description=Battleship-only off-host backup through the existing recovery receiver
+Wants=network-online.target
+After=network-online.target docker.service tailscaled.service battleship-backup.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+StateDirectory=battleship-offhost
+StateDirectoryMode=0700
+CacheDirectory=battleship-offhost
+CacheDirectoryMode=0700
+# Existing credentials are referenced, never copied or printed.
+LoadCredential=repository-password:/etc/nightly-recovery/repository-password
+LoadCredential=transport-password:/etc/nightly-recovery/transport-password
+ExecStart=/usr/bin/python3 -I -B /usr/local/lib/battleship-offhost/offhost-backup.py
+TimeoutStartSec=900s
+Nice=10
+CPUQuota=50%
+MemoryMax=768M
+TasksMax=128
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/battleship-offhost /var/cache/battleship-offhost /opt/battleship/backups
+IPAddressDeny=any
+IPAddressAllow=100.106.195.121/32

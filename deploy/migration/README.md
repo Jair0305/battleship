@@ -558,10 +558,23 @@ Todo lo anterior a esta sección que describa el corte como pendiente quedó sup
   de Battleship. `daily-backup.sh` re-verifica `SHA256SUMS` y escribe
   `backups/last-daily.public.json`. Primer resultado verificado:
   `daily-20261025T213133Z`, 16 tablas, 498 filas.
-- **El backup es solo local (dump lógico en el mismo host). No hay copia off-host
-  ni retención automática**; no se borra nada. El mecanismo off-host existente en
-  phosrvr (`nightly-recovery`) tiene alcance fijo de otros servicios y requiere
-  que su responsable agregue Battleship; está pendiente.
+- **Off-host (autorizado por el responsable de observabilidad/recovery)**:
+  `offhost-backup.py` + `battleship-offhost-backup.{service,timer}` (04:45 UTC,
+  después del backup diario) reutilizan el receiver/repositorio restic, la CA y las
+  credenciales de `nightly-recovery` (referenciadas con `LoadCredential`, sin
+  copiarlas ni imprimirlas). No modifican su exportador ni su servicio: host
+  `vm4-battleship`, tag `battleship-critical-v1`, sin `forget`/`prune`, sin
+  reintentos (un estado desconocido exige una operación nueva). Sube el último
+  daily verificado (dump, huellas, globals/roles privados, `.env`, compose, nginx),
+  el marcador y los scripts de huellas/backup. Instalado en
+  `/usr/local/lib/battleship-offhost/`. Primer resultado REAL (2026-10-25 21:43Z):
+  snapshot `65a13b13cb18…`, confirmado por listado, leído con `restic ls`, restaurado
+  selectivamente en un directorio aislado con SHA256 idénticos y restaurado a una base
+  desechable con huellas idénticas (16 tablas, 498 filas). Los 33 + 1 snapshots de
+  otros servicios no cambiaron y su último backup sigue exitoso.
+  El resultado queda en `/opt/battleship/backups/last-offhost.public.json`.
+  Sigue sin haber retención automática ni borrado; custodia 1Password de la
+  contraseña del repositorio es la existente del receiver.
 - El workflow `deploy.yml` sigue **deshabilitado** en GitHub y
   `BATTLESHIP_DEPLOY_TARGET` no está definida. Habilitarlo exige antes: que
   `main` contenga estos cambios, una prueba de despliegue con ingreso pausado y
