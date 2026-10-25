@@ -8,7 +8,7 @@ No se ha autorizado ni ejecutado el corte.**
 
 | Componente | Producción AMD64 | Preparación ARM64 |
 | --- | --- | --- |
-| Frontend | `af4f47783e6f44d6b086648348bc37392d661ecf` | Archivo limpio de ese commit; mismo package-lock; sin cambios de aplicación |
+| Frontend | `af4f47783e6f44d6b086648348bc37392d661ecf` | Código de ese commit; candidato con corrección de dependencias autorizada, descrita abajo |
 | Backend | `c80b74a6194e1b014c314c53f041ff41370d6bcd` | Reempaquetado del JAR que ejecuta producción, sin recompilar dependencias |
 | JAR SHA256 | `d65ba230f653a29f15d40999ea65f4745218dc5e3d5945439f77e1af3f185108` | Idéntico dentro del contenedor ARM64 |
 | Node / Alpine | `22.23.1` / `3.24.1` | Mismas versiones, verificadas ejecutándolas |
@@ -30,8 +30,12 @@ Imágenes ARM64 locales verificadas en phosrvr:
 La imagen frontend de producción tiene un nombre GHCR, pero ese tag no existe en
 el registro: la liberación visual fue cargada manualmente. La imagen backend
 publicada solamente ofrece AMD64. Por eso no se usó `latest` ni se desplegó HEAD.
-Los Dockerfiles de aplicación solo reciben argumentos para fijar los runtimes de
-los siguientes builds; los archivos de código y los lockfiles no cambian.
+Los Dockerfiles de aplicación reciben argumentos para fijar los runtimes de los
+siguientes builds. El código de negocio permanece igual. El ensayo inicial
+conservó también el lockfile original; posteriormente el
+usuario autorizó explícitamente **«repara las vulnerabilidades obviamente»**.
+El candidato de corte debe incorporar esa corrección; la imagen original de
+frontend se conserva como evidencia/rollback y no es el candidato corregido.
 
 Archivo de recuperación de ambas imágenes ARM64 en phosrvr:
 `/opt/battleship/backups/migration-arm64-images.tar.gz`, SHA256
@@ -219,7 +223,7 @@ temporizadores duplicados sobre el clon. Los datos reales vendrán del dump fina
 ## CI/CD preparado
 
 - Workflow nativo `ubuntu-24.04-arm`, `linux/arm64`; conserva pruebas backend,
-  frontend, lint, auditoría y typecheck. No actualiza dependencias.
+  frontend, lint, auditoría y typecheck. Instala el lockfile versionado.
 - PRs validan y construyen sin publicar imágenes ni desplegar.
 - Tags futuros `${commit}-arm64`, sin reemplazar `latest` AMD64.
 - Secretos nuevos: `PHOSRVR_SSH_HOST`, `PHOSRVR_SSH_USER`, `PHOSRVR_SSH_KEY`,
@@ -245,9 +249,9 @@ pasó la instalación de Temurin/Node y las pruebas del backend en ARM64. Falló
 3 altas y 1 crítica). El despliegue fue omitido; no publicó imágenes ni ejecutó
 cambios en producción.
 
-Se comprobó con `git diff --exit-code af4f477 HEAD --
+Antes de la corrección autorizada se comprobó con `git diff --exit-code af4f477 979455f --
 battleship-frontend/package.json battleship-frontend/package-lock.json` que los
-manifests y el lockfile coinciden con la versión frontend de producción. Son
+manifests y el lockfile coincidían con la versión frontend de producción. Eran
 hallazgos sobre las dependencias conservadas, no una actualización introducida
 por esta migración.
 
@@ -260,15 +264,50 @@ después de la liberación visual y corregidos en Next 16.4.1. Estos avisos tien
 condiciones específicas de explotación; el resultado de audit no demuestra que
 Battleship haya sido explotado.
 
-No se ejecutó `npm audit fix`, no se cambiaron dependencias, no se añadió una
-allowlist y no se debilitó el umbral del workflow. El usuario reiteró conservar
-las versiones y mover el servicio tal como está. Se mantiene esa decisión:
-**CI sigue bloqueando nuevos builds/publicaciones/despliegues automáticos.**
-Resolver los hallazgos requiere un trabajo separado de actualización autorizado;
-no se convierte esta migración en ese trabajo. El PR sigue borrador y sin merge.
-Una eventual migración manual de los artefactos existentes debe aprobarse
-explícitamente, dejando visible esta limitación de CI y sin presentar el gate
-como aprobado. Cloudflare, ingress y aprobación de corte siguen pendientes.
+El usuario autorizó después reparar las vulnerabilidades. Se actualizaron solo
+Next y su configuración ESLint, las transitivas afectadas y el parser de CSS.
+No se ejecutó `npm audit fix --force`, no se añadió allowlist y no se debilitó
+el umbral del workflow. La auditoría del lockfile corregido reporta cero
+vulnerabilidades. Cloudflare, ingress y aprobación de corte siguen pendientes;
+corregir dependencias no constituye aprobación de corte.
+
+| Dependencia | Anterior | Corregida |
+| --- | --- | --- |
+| next / eslint-config-next | 16.3.8 | 16.4.1, versiones exactas alineadas |
+| follow-redirects | 1.16.0 | 1.16.1 |
+| source-map-js | 1.2.1 | 1.2.2 |
+| zod | 4.4.3 | 4.6.7 |
+| postcss-selector-parser | 6.1.4 | 7.1.6, override explícito |
+
+Tailwind permanece en 3.4.19. El override del parser cierra
+[GHSA-rj75-hqrm-r3gf](https://github.com/advisories/GHSA-rj75-hqrm-r3gf) sin migrar
+la aplicación a Tailwind 4. Se comprobó compatibilidad generando el CSS completo
+con ambos árboles de dependencias: SHA256 idéntico
+`8b11dcc3ee1456fca10511373c7c51ceb4a0b96e4d7bc4d7d4be44b0ca314f73`.
+No se cambiaron componentes, reglas de estilo, lógica de juego, backend ni datos.
+Pasaron `npm ci`, `npm audit --audit-level=moderate`, lint y TypeScript localmente.
+
+El Dockerfile de producción compiló el candidato nativamente en ARM64 con el
+mismo Node 22.23.1/Alpine, bajo `/run/lock/nightly-phosrvr-build.lock`. El builder
+conservó 4 GiB/1.5 CPU, terminó sin OOM y quedó detenido. También pasó la auditoría
+durante instalación y después de `npm prune --omit=dev`.
+
+- Imagen corregida: `battleship-frontend:security-20261025`, ID
+  `sha256:2637e728187faeb0bf911c24f242bbf8b5200d70a4ff8df1660c9c497e6c44fa`.
+- Archivo privado: `/opt/battleship/backups/frontend-security-20261025.tar.gz`, SHA256
+  `2e7381b7f954385a3215482799c577fb7ff9196760361535155f57bc58b9c939`.
+  Se verificaron CRC gzip, tag, arquitectura y hashes del config/blob OCI.
+- Build log: `/opt/battleship/build/security-20261025-build.log`.
+- Auditoría completa del lockfile: `evidence/npm-audit-security-20261025.json`;
+  recibo de pruebas: `evidence/security-remediation-20261025.json`.
+
+Se repitió `smoke.mjs` con esa imagen sobre el volumen preflight: registro/login,
+sesiones, jugadores/espectador, chat STOMP/WebSocket sin duplicados, flotas,
+privacidad, disparos hasta victoria, revancha, rendición y salida. Los cuatro
+grupos de pruebas pasaron. `.env.security-preflight` es privado y apunta solo al
+volumen de ensayo; `.env` original no cambió. Después se detuvieron todos los
+contenedores de ensayo. La producción del origen, DNS y proxy público siguen
+sin cambios. La aprobación del corte continúa pendiente.
 
 Para comprobar los pasos que no llegó a ejecutar CI después del fallo de audit,
 se ejecutaron `npm ci`, `npm run lint`, `npm run build` y
@@ -283,8 +322,9 @@ de seguridad del workflow.
 
 Interrupción estimada: **5–10 minutos** para escrituras y reconexión de sesiones;
 puede alargarse si Cloudflare o certificados tardan. Buscar una ventana sin
-partidas activas; no forzar a terminar juegos. El frontend/backend mantienen sus
-versiones anteriores verificadas, no imágenes de un commit nuevo de infraestructura.
+partidas activas; no forzar a terminar juegos. Usar el frontend corregido y
+verificado tras la autorización de dependencias; conservar el JAR original del
+backend. Revalidar la versión que sigue sirviendo el origen antes del corte.
 
 Condiciones previas pendientes:
 
@@ -296,7 +336,7 @@ Condiciones previas pendientes:
    Resolver TLS para este dominio y continuidad de las sesiones RTC vecinas
    durante la recarga antes de cerrar ingreso o habilitar tráfico al destino.
 3. Commit y paquete revisados; respaldo e imágenes ARM64 existentes disponibles.
-   Registrar que audit bloquea CI automático. No omitirlo ni cambiar versiones.
+   Auditoría y CI del candidato corregido aprobados, sin omitir el gate.
 4. Confirmación explícita del usuario para este corte.
 
 Secuencia después de confirmar:
@@ -332,7 +372,7 @@ Secuencia después de confirmar:
    permite escrituras concurrentes en su base antigua.
 9. Crear `.production-active` y configurar el destino CI como phosrvr sin saltar
    audit. Impedir que el workflow antiguo vuelva a desplegar en nightly-int;
-   mientras CI esté bloqueado no presentar despliegue automático como validado.
+   verificar el siguiente despliegue exclusivamente hacia phosrvr.
    Habilitar backup exclusivo diario; verificar su primer resultado. Reanudar CI
    solo hacia phosrvr. Mantener contenedores/volumen/config/certificados/backups
    originales y acordar duración de la ventana de rollback antes de retirarlos.
@@ -369,8 +409,7 @@ de los contenedores originales de Battleship permite reabrir sin tocar datos.
 
 - Restablecer acceso técnico a Cloudflare, confirmar cuenta/zona y autorizar el
   corte; instalar la hoja mediante Cleanly y verificar producción públicamente.
-- Resolver el bloqueo de auditoría de dependencias con autorización separada y
-  conservar evidencia de CI aprobado del commit de infraestructura.
+- Conservar evidencia de auditoría y CI aprobados del candidato corregido.
 - Acordar ventana de rollback, retención y respaldo automático off-host.
 - Después de esa ventana, retirar únicamente recursos/secretos/claves/rutas
   demostrados exclusivos de Battleship. No borrar nada durante esta preparación.
