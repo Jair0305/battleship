@@ -1,14 +1,29 @@
 # Battleship: preparación de migración a phosrvr
 
-Fecha de evidencia: 2026-10-25 UTC (2026-10-24 en México).
+Fecha de evidencia: 2026-10-25 UTC.
 **Estado: candidato final preparado y probado; producción todavía está en nightly-int.
 El usuario autorizó el corte condicionado a cerrar los gates restantes; todavía
 no se ha ejecutado.**
 
 **El usuario rechazó el residual Ubuntu de `7b8733c`: no promover ese candidato.**
 Se conserva su evidencia como histórica; la [remediación actual](../security/ubuntu-residual.md)
-cambia la base del backend a Alpine/MUSL y debe cerrar nuevos CI/digests/ensayos
-antes del GO. La autorización de ventana sigue condicionada, sin aceptación de riesgo.
+cambia la base del backend a Alpine/MUSL. El candidato corregido `f4a06e6` ya
+cerró CI, publicación, digests y ensayos finales. La autorización de ventana
+sigue condicionada a Cloudflare/TLS y GO coordinado, sin aceptación de riesgo.
+
+**Candidato actual `f4a06e6`:** publicación nativa ARM64/AMD64
+[`40210687407`](https://github.com/Jair0305/battleship/actions/runs/40210687407)
+aprobada; ocho digests verificados contra los config digests escaneados. Los
+ocho reportes Trivy 0.76.1, DB del 25-Oct 12:57 UTC, no contienen hallazgos de
+ninguna severidad. ARM64 restauró 16 tablas/3.737 filas y terminó con 4.122;
+AMD64 nativo restauró ese respaldo con huellas idénticas y terminó con 4.507.
+Ambos pasaron juego completo WS/SockJS, ranking/chat y bloqueo de falsificación,
+reinicio, cuentas/hashes/sesiones y revocaciones, sin cambiar el esquema.
+Clones detenidos y nuevas escrituras respaldadas. El
+[recibo actual](evidence/musl-final-candidate-20261025.json) registra digests,
+reportes, ensayos y paquete `/opt/battleship/cutover/f4a06e6` validado sin activar
+configuración, servicios ni marker de producción. Origen revalidado a las
+16:25 UTC: mismas revisiones y cero partidas/deadlines; sigue activo.
 
 **Actualización de seguridad:** la instrucción posterior del usuario autoriza
 parches mínimos de runtimes, dependencias y código. La tabla siguiente describe
@@ -34,7 +49,7 @@ multijugador WebSocket/SockJS, bloqueo STOMP y persistencia con esquema intacto.
 La revocación se probó solo en el clon: 83 tokens anteriores rechazados, datos
 conservados y nuevos accesos válidos.
 
-**Candidato final `7b8733c`:** CI nativo y publicación aprobados, con los ocho
+**Candidato histórico retirado `7b8733c`:** CI nativo y publicación aprobados, con los ocho
 digests ligados a sus config digests escaneados. ARM64 restauró 16 tablas/2.966
 filas y terminó con 3.352 filas nuevas de ensayo. Docker Desktop AMD64 nativo
 restauró ese dump ARM con huellas idénticas y terminó con 3.737 filas. Ambas
@@ -374,9 +389,10 @@ pasaron, pero el bootstrap sigue fallando antes de observar pestañas por el
 `browser-service.mjs` faltante. Soporte indicó reinstalar Browser desde la UI;
 el usuario ya fue informado. No se interpreta como logout, no se usa T3 como
 alternativa ni se repara el host manualmente. No hay baseline Cloudflare ni GO.
-La decisión específica sobre los 22 MEDIUM/16 LOW sin fix también está pendiente;
-la aprobación operativa no equivale a aceptar ese residual. Origen activo,
-clones detenidos y locks liberados mientras se completan esos pasos.
+El usuario rechazó expresamente los 22 MEDIUM/16 LOW: `7b8733c` está retirado.
+La remediación Alpine/MUSL y sus nuevos artefactos deben cumplir los gates
+descritos en seguridad; la aprobación operativa no acepta el residual anterior.
+El origen sigue activo y no se reservan locks mientras falta el GO.
 
 Interrupción estimada: **5–10 minutos** para escrituras y reconexión de sesiones;
 puede alargarse si Cloudflare o certificados tardan. Buscar una ventana sin
@@ -392,12 +408,14 @@ Condiciones previas pendientes:
    registros del subdominio y sus valores anteriores, proxy/TTL/restricciones.
 2. Responsable del proxy confirma mecanismo persistente y lock compartido;
    valida nueva configuración completa preservando todas las rutas existentes.
-   Resolver TLS para este dominio y continuidad de las sesiones RTC vecinas
-   durante la recarga antes de cerrar ingreso o habilitar tráfico al destino.
-3. Revalidar que los artefactos siguen siendo los ocho digests de `7b8733c`
-   ya publicados, escaneados y probados, sin omitir el gate. `f9eaa42` es histórico.
-4. Disposición del residual Ubuntu sin fix documentado en seguridad; no declararlo
-   corregido ni aceptar riesgo por omisión. La autorización de ventana ya llegó.
+   Resolver TLS para este dominio y comprobar vecinos antes/después de la
+   recarga, cuya posible reconexión RTC ya fue autorizada.
+3. Revalidar los ocho digests del candidato corregido `f4a06e6`, ligados a sus
+   reportes y ensayos del [recibo actual](evidence/musl-final-candidate-20261025.json).
+   `7b8733c` está retirado; `f9eaa42` es histórico.
+4. Conservar la evidencia de remediación del residual Ubuntu y el gate estricto
+   de todas las severidades; no usar ignores ni aceptar riesgo por omisión.
+   La autorización de ventana ya llegó.
 5. Revocación real durante el corte, conservando datos y usando el SQL ensayado;
    retiro legacy y bloqueo STOMP están cerrados en el candidato final.
 
@@ -478,9 +496,11 @@ de los contenedores originales de Battleship permite reabrir sin tocar datos.
 
 ## Pendientes de cierre
 
-- Restablecer acceso técnico a Cloudflare, confirmar cuenta/zona y autorizar el
-  corte; instalar la hoja mediante Cleanly y verificar producción públicamente.
-- Conservar la evidencia final aprobada de `7b8733c` y del corte real.
+- Restablecer acceso técnico a Cloudflare, confirmar cuenta/zona y obtener el GO
+  coordinado para ejecutar la ventana ya autorizada; instalar la hoja mediante
+  Cleanly y verificar producción públicamente.
+- Conservar los digests y ensayos del candidato corregido `f4a06e6` y la evidencia
+  del futuro corte real. `7b8733c` permanece retirado para promoción.
 - Acordar ventana de rollback, retención y respaldo automático off-host.
 - Después de esa ventana, retirar únicamente recursos/secretos/claves/rutas
   demostrados exclusivos de Battleship. No borrar nada durante esta preparación.

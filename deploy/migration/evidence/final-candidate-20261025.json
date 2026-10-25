@@ -120,7 +120,7 @@
   "cutover_authorization": {
     "source_thread": "import:codex:01a0a42a-72f0-7f03-a270-b007dc081dd6",
     "utc_approx": "2026-10-25T14:40:00Z",
-    "user_response": "Sí, ejecutar cuando estén verificadas las condiciones restantes",
+    "user_response": "SÃ­, ejecutar cuando estÃ©n verificadas las condiciones restantes",
     "scope": "Battleship 5-10min and shared reload may disconnect RTC/POM; conditioned on remaining gates"
   },
   "pr_ci_run": 40197284772,

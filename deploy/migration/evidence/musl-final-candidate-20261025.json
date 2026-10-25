@@ -1,0 +1,244 @@
+{
+  "candidate_commit": "f4a06e6e2a9f4d9f197c6f69ea8962adb91586ac",
+  "publication_run": 40210687407,
+  "images": [
+    {
+      "component": "backend",
+      "architecture": "arm64",
+      "tag": "ghcr.io/jair0305/battleship-backend:f4a06e6e2a9f4d9f197c6f69ea8962adb91586ac-arm64",
+      "reference": "ghcr.io/jair0305/battleship-backend@sha256:7a9c6f7483781f5ecd0dd95547fe45363f33557253630990488b6a882cc26765",
+      "digest": "sha256:7a9c6f7483781f5ecd0dd95547fe45363f33557253630990488b6a882cc26765",
+      "scanned_config": "sha256:2adaa4acfe9703db88c80d99739025611f8a8177984a543c7310d0a2adb6feb8",
+      "findings": {},
+      "scan_sha256": "e80a76e04b7f7597c96db9d35616a0d5a57c01c14a174d93db1411a5a5490713",
+      "other_report_sha256": {
+        "image-1.cdx.json": "9c83ce1ee3e588b285aad79d9178c59dcd6b7fde1543365b860a3f5f51bc1a0c"
+      }
+    },
+    {
+      "component": "frontend",
+      "architecture": "arm64",
+      "tag": "ghcr.io/jair0305/battleship-frontend:f4a06e6e2a9f4d9f197c6f69ea8962adb91586ac-arm64",
+      "reference": "ghcr.io/jair0305/battleship-frontend@sha256:d063cd79efa2079465826912b4cd65f34173ac9f5ae9540cc7ac95a1c436677c",
+      "digest": "sha256:d063cd79efa2079465826912b4cd65f34173ac9f5ae9540cc7ac95a1c436677c",
+      "scanned_config": "sha256:f76429cb7c8f47030ffbdc8ce1bfb477ceb7627381b194aaeb679ec06f3183f4",
+      "findings": {},
+      "scan_sha256": "91f72485b5ad4202fce5c57a6668670c710aed9476c551bf8a3f2bc40206c588",
+      "other_report_sha256": {
+        "image-2.cdx.json": "8b88028a94bc027adcb92c11f678643da55ad185c3646163fc2b2f5a1e0b25b5"
+      }
+    },
+    {
+      "component": "postgres",
+      "architecture": "arm64",
+      "tag": "ghcr.io/jair0305/battleship-postgres:f4a06e6e2a9f4d9f197c6f69ea8962adb91586ac-arm64",
+      "reference": "ghcr.io/jair0305/battleship-postgres@sha256:69bb38724ee6ff0d5011b7b457ef924ceb6e06e6468996d76a417606fdd02c71",
+      "digest": "sha256:69bb38724ee6ff0d5011b7b457ef924ceb6e06e6468996d76a417606fdd02c71",
+      "scanned_config": "sha256:1777d6124cdb403e811e7695bd5be5fe602530914d837444e26c470850508141",
+      "findings": {},
+      "scan_sha256": "679bd99fd237ba20429adde2ea4ba4eae3123e04aff3f0f1d93de50f37b57d52",
+      "other_report_sha256": {
+        "image-3.cdx.json": "ef5e4fc9e27b1487f05f04d1217d732d6395987b8e8bf0b76a558b7ca1ae1705"
+      }
+    },
+    {
+      "component": "nginx",
+      "architecture": "arm64",
+      "tag": "ghcr.io/jair0305/battleship-nginx:f4a06e6e2a9f4d9f197c6f69ea8962adb91586ac-arm64",
+      "reference": "ghcr.io/jair0305/battleship-nginx@sha256:dd3c4b1622f02cd09cc9fc68bd60c413bca24bb3d7697f5ca9be68e4ebc85da1",
+      "digest": "sha256:dd3c4b1622f02cd09cc9fc68bd60c413bca24bb3d7697f5ca9be68e4ebc85da1",
+      "scanned_config": "sha256:ea5e268f46e7d02c14fc5a94967d1832c5f9ffee7c53bf2a09f7b393d38a6041",
+      "findings": {},
+      "scan_sha256": "753dacaf13bfef37a816459156773388e838f238c13c5c277206216a3c8e2f6b",
+      "other_report_sha256": {
+        "image-4.cdx.json": "7d19424646e3024f5e04380619669e97ed3bfcd61e8f81aa2645c1724296d0ee"
+      }
+    },
+    {
+      "component": "backend",
+      "architecture": "amd64",
+      "tag": "ghcr.io/jair0305/battleship-backend:f4a06e6e2a9f4d9f197c6f69ea8962adb91586ac-amd64",
+      "reference": "ghcr.io/jair0305/battleship-backend@sha256:11a8c64fc9ed3003e345ea06fc4333d240f7ed57f5c6d95ae191a8f80dea8bec",
+      "digest": "sha256:11a8c64fc9ed3003e345ea06fc4333d240f7ed57f5c6d95ae191a8f80dea8bec",
+      "scanned_config": "sha256:997c100fe7d094f3b77e5e88351f56d112ac3a91a744e9c92c319dcf30a94779",
+      "findings": {},
+      "scan_sha256": "0f82bbfd75ac63ad703999858d98c49fcd679e785fd74f0ed366db8f81e6b052",
+      "other_report_sha256": {
+        "image-1.cdx.json": "0880dc50d908ed59b4301f91b60712c27bd03cdddf2c7bcaf6d12ee062a20772"
+      }
+    },
+    {
+      "component": "frontend",
+      "architecture": "amd64",
+      "tag": "ghcr.io/jair0305/battleship-frontend:f4a06e6e2a9f4d9f197c6f69ea8962adb91586ac-amd64",
+      "reference": "ghcr.io/jair0305/battleship-frontend@sha256:9643dfd96a89ef9872968092c5b9a23321fcea2b89759a235adb0cb093364531",
+      "digest": "sha256:9643dfd96a89ef9872968092c5b9a23321fcea2b89759a235adb0cb093364531",
+      "scanned_config": "sha256:68fa054ffc85be18ba8dab38ebd44056145e2e1245fcd2ed1f7dfb9372d0221f",
+      "findings": {},
+      "scan_sha256": "6c83ddbb6c809e51a92cf9ab6dab8831225182044cc0573989845c349b212407",
+      "other_report_sha256": {
+        "image-2.cdx.json": "73c59bf28b4ad6eea0736a684cfb0a5136da53063cd995b4de6bc4e512ab8e70"
+      }
+    },
+    {
+      "component": "postgres",
+      "architecture": "amd64",
+      "tag": "ghcr.io/jair0305/battleship-postgres:f4a06e6e2a9f4d9f197c6f69ea8962adb91586ac-amd64",
+      "reference": "ghcr.io/jair0305/battleship-postgres@sha256:61de2d9965f1858d0685e0cb8914c2ac9f7325d8a221942a0cc70c75207b018f",
+      "digest": "sha256:61de2d9965f1858d0685e0cb8914c2ac9f7325d8a221942a0cc70c75207b018f",
+      "scanned_config": "sha256:06c33292671aeee79bba26335f03869e7b9603736af112d79ce98fe995456afd",
+      "findings": {},
+      "scan_sha256": "501d223a6008526e90c95dda421fdfe8beadc0e1d663a81acab7bc1c6c14cf1c",
+      "other_report_sha256": {
+        "image-3.cdx.json": "9dd290d0cfed556aeb7ad2f3f9ede2c5cfd991603fd339e0948fb9958dc12190"
+      }
+    },
+    {
+      "component": "nginx",
+      "architecture": "amd64",
+      "tag": "ghcr.io/jair0305/battleship-nginx:f4a06e6e2a9f4d9f197c6f69ea8962adb91586ac-amd64",
+      "reference": "ghcr.io/jair0305/battleship-nginx@sha256:d8a5388dcd0d22391bd77c0fef4a05e6686ba854909e2bc46652841677d96021",
+      "digest": "sha256:d8a5388dcd0d22391bd77c0fef4a05e6686ba854909e2bc46652841677d96021",
+      "scanned_config": "sha256:1db86167899ef557a80e96c9b25fb1f8d69cc5c52d453d9f3de1d2450d6d1419",
+      "findings": {},
+      "scan_sha256": "e7907f67a7365c0e45663d8c17486c6994e994160da5a3024cb4ef1dabe3471e",
+      "other_report_sha256": {
+        "image-4.cdx.json": "e9c1863a627e454044bd8639397582b58db5d47ccc40c9ff3afdd2f2009dc5a2"
+      }
+    }
+  ],
+  "recorded_at_utc": "2026-10-25T16:29:21.583345+00:00",
+  "native_pr_ci_run": 40209554036,
+  "publication_conclusion": "success",
+  "artifacts_ready": true,
+  "promotion_status": "technical artifact gates passed; operational Cloudflare/TLS and coordinated GO pending",
+  "production_cutover_performed": false,
+  "production_sessions_revoked": false,
+  "shared_proxy_reloaded": false,
+  "dns_changed": false,
+  "withdrawn_previous_candidate": "7b8733ce6fc5bb420ae023bf5966cbae1052cb46",
+  "user_residual_decision": "No, resolverlo antes de migrar",
+  "residual_treatment": "Ubuntu components removed/replaced by supported Alpine 3.24.3 and official Temurin 21.0.13+9 MUSL; no suppressions or risk waiver",
+  "scan_scope": "eight exact published images; all vulnerability severities; full JSON and CycloneDX SBOM hashes above; no universal absence claim",
+  "scanner_versions": {
+    "arm64": "Version: 0.76.1\nVulnerability DB:\n  Version: 2\n  UpdatedAt: 2026-10-25 12:57:48.463991102 +0000 UTC\n  NextUpdate: 2026-10-26 12:57:48.463990841 +0000 UTC\n  DownloadedAt: 2026-10-25 16:17:27.004678364 +0000 UTC\nJava DB:\n  Version: 1\n  UpdatedAt: 2026-10-25 00:59:20.065031654 +0000 UTC\n  NextUpdate: 2026-10-28 00:59:20.065031063 +0000 UTC\n  DownloadedAt: 2026-10-25 16:17:42.030540451 +0000 UTC\n",
+    "amd64": "Version: 0.76.1\nVulnerability DB:\n  Version: 2\n  UpdatedAt: 2026-10-25 12:57:48.463991102 +0000 UTC\n  NextUpdate: 2026-10-26 12:57:48.463990841 +0000 UTC\n  DownloadedAt: 2026-10-25 16:18:10.516418647 +0000 UTC\nJava DB:\n  Version: 1\n  UpdatedAt: 2026-10-25 00:59:20.065031654 +0000 UTC\n  NextUpdate: 2026-10-28 00:59:20.065031063 +0000 UTC\n  DownloadedAt: 2026-10-25 16:18:32.351169892 +0000 UTC\n"
+  },
+  "drills": {
+    "arm64": {
+      "architecture": "arm64",
+      "status": "passed",
+      "exact_image_configs_checked": 4,
+      "restored_tables": 16,
+      "restored_rows": 3737,
+      "after_tables": 16,
+      "after_rows": 4122,
+      "schema_sha256": "8110579202dbb1f6337e3c96ae2517bb18e04f5e8fbf4c51dc2d76f1a8271ecc",
+      "new_writes_backup_sha256": "34d4ebfb57bbcefcda5d25081d1757ed73d108da7a802e39fb5337cec1b32849",
+      "revocation_preserved": true,
+      "full_stack_restart": "passed",
+      "websocket_ranked": "passed",
+      "sockjs_polling_ranked": "passed",
+      "client_stomp_spoof_rejected": "passed",
+      "host": "phosrvr native ARM64",
+      "private_root": "/opt/battleship/migration/security-final-arm64-20261025-f4a06e6",
+      "writers_stopped_after_drill": true,
+      "private_log_sha256": "cb4d5eccbe8faf106464af362e3c5ae84759ab60f7d96b16af55ea6d1b7e0a19"
+    },
+    "amd64": {
+      "architecture": "amd64",
+      "status": "passed",
+      "exact_image_configs_checked": 4,
+      "restored_tables": 16,
+      "restored_rows": 4122,
+      "after_tables": 16,
+      "after_rows": 4507,
+      "schema_sha256": "8110579202dbb1f6337e3c96ae2517bb18e04f5e8fbf4c51dc2d76f1a8271ecc",
+      "new_writes_backup_sha256": "aebcf86d4d409dd566d9a646875ae5116ac932fc867e564dd12bb6d4c922e550",
+      "revocation_preserved": true,
+      "full_stack_restart": "passed",
+      "websocket_ranked": "passed",
+      "sockjs_polling_ranked": "passed",
+      "client_stomp_spoof_rejected": "passed",
+      "host": "native Docker Desktop desktop-linux/x86_64",
+      "private_root": "LOCALAPPDATA/BattleshipMigration/20261025/final-musl-amd64",
+      "writers_stopped_after_drill": true,
+      "private_log_sha256": "6a1815d3ca53aeefe78e9e0b93bdc332288bc6db1348bd11a99253ea30116705"
+    }
+  },
+  "inverse_transfer_archive_sha256": "d2c7207a6047482f4bff14a70d41f5c5e054b60644fa336c6588c18c94199027",
+  "cutover_packet": {
+    "directory": "/opt/battleship/cutover/f4a06e6",
+    "public_archive_sha256": "a98017586c2396af7bab5fb67bf8cc5fe35c243aa6a423a278261a264c9d8ae2",
+    "compose_validated": true,
+    "canonical_environment_activated": false,
+    "production_marker_present": false,
+    "canonical_new_volume_absent_at_preparation": true,
+    "application_binds": [
+      "127.0.0.1:3006",
+      "127.0.0.1:3007"
+    ]
+  },
+  "cutover_authorization": {
+    "source_thread": "import:codex:01a0a42a-72f0-7f03-a270-b007dc081dd6",
+    "utc_approx": "2026-10-25T14:40:00Z",
+    "user_response": "Sí, ejecutar cuando estén verificadas las condiciones restantes",
+    "scope": "Battleship 5-10min and shared reload may disconnect RTC/POM; conditioned on remaining gates"
+  },
+  "proxy_preparation": {
+    "status": "prepared-and-validated-no-install-no-load",
+    "utc": "20261025T144939Z",
+    "domain": "battleship.nightly.mx",
+    "upstream": "127.0.0.1:3006",
+    "public_leaf_sha256": "e83f60fdec9d53898b2a09a03295a7824eaa7f794d1070811bf440d8905951f3",
+    "candidate_json_sha256": "5553b6dd2e20600b3ba67c4ef225aab51248f1341e7e06e0740bb73f16053ae6",
+    "baseline_json_sha256": "11276f9769071e122ac5683e98b99ff5f7e8bda325e845042ed693976d118c71",
+    "baseline_files": {
+      "/opt/pixel-office-media/rendered/Caddyfile": "864dc8f8630db2772d79b2ae2dd9c1d8a8eaa8ddfd8ed3b75c03380592d82ea2",
+      "/opt/pixel-office-media/templates/Caddyfile": "c1702df84fbb7a5d8faaab68932c1f1c9bdcf5332c3844119c1c664dfb33a718",
+      "/opt/pixel-office-media/render.sh": "de092debb5f82d3b59a1f40adba09315c7669e4b2b89f1854190f91cea8f1661"
+    },
+    "baseline_leaves": {},
+    "neighbor_probes": {
+      "rtc.pixel-office.app": 200,
+      "rtc.nightlysoftware.com": 200,
+      "turn.pixel-office.app": 404,
+      "turn.nightlysoftware.com": 404
+    },
+    "neighbor_routes_unchanged": true,
+    "protected_containers_unchanged": 36,
+    "full_configuration_delta_verified": true,
+    "persistent_import_verified": true,
+    "tls_root_only_verified": true,
+    "preparer_sha256": "ccbfa4b574e8b9ef5cc4f6ac7c5fcc238d7949a29f96bf4332b4a9786ffb5513",
+    "packet_directory": "/opt/battleship/proxy-packets/20261025T144939Z",
+    "staging_directory": "/opt/pixel-office-media/data/caddy-config/battleship-candidates/20261025T144939Z",
+    "runtime_reload_performed": false,
+    "dns_changed": false,
+    "scope": "historical preparation only; Cleanly must revalidate under shared lock before joint GO"
+  },
+  "source_revalidation": {
+    "started_at_utc": "2026-10-25T16:25:25Z",
+    "backend_revision": "c80b74a6194e1b014c314c53f041ff41370d6bcd",
+    "backend_image_id": "sha256:d554fb46e01a24c4cbbf2aee7f689917ddaf5107fa635fc54dd9e435029c7a72",
+    "frontend_revision": "af4f477",
+    "frontend_image_id": "sha256:f8d0de53f19951572b503694d39b63c453e65bb2789eb1165329b36f8823aa5d",
+    "four_original_containers_running": true,
+    "active_games": 0,
+    "pending_ready_deadlines": 0,
+    "writers_drained": false,
+    "must_repeat_immediately_before_cut": true
+  },
+  "writer_control": {
+    "only_application_writer": "battleship-backend includes scheduled tasks",
+    "freeze": "close only Battleship ingress and WebSockets; stop backend with 60s grace; recheck active games/deadlines after shutdown",
+    "window_minutes": "5-10 already conditionally authorized",
+    "rollback": "freeze target writers; export new consistent dump; restore into new AMD64 patched recovery volume, preserving new writes and revocations; never point DNS to stale database"
+  },
+  "remaining_gates": [
+    "coordinator Chrome/Cloudflare account, zone and exact project DNS baseline; TLS and joint GO with Cleanly",
+    "fresh source writer freeze, consistent final dump, target restore/fingerprints and exposed-session revocation during the authorized cut",
+    "public TLS and two-player/spectator functional validation; preserve original resources and rollback writes",
+    "enable CI target/marker and project backup only with successful real cut; agree rollback retention"
+  ]
+}

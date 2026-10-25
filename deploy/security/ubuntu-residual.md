@@ -63,7 +63,12 @@ Fuentes primarias adicionales:
 [glibc Debian](https://security-tracker.debian.org/tracker/CVE-2026-18374),
 [dash Debian](https://security-tracker.debian.org/tracker/CVE-2026-102474),
 [componente libiberty](https://security-tracker.debian.org/tracker/CVE-2022-27943),
+[fuentes de libstdc++ GCC 15.2](https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-15.2.0/libstdc%2B%2B-v3/libsupc%2B%2B/Makefile.am),
 [fix upstream Zstandard](https://github.com/facebook/zstd/commit/e1873ad576cb478fff0e6e44ad99599cd5fd2846).
+
+La receta de libstdc++ incorpora `cp-demangle.c`, no `rust-demangle.c`, el
+componente del aviso GCC citado. Esto respalda esa conclusión acotada junto al
+inventario real; no se deduce únicamente de la ausencia de hallazgos del scanner.
 
 ## Evidencia del ensayo ARM64
 
@@ -103,9 +108,21 @@ demostró el cambio: HIGH/CRITICAL devuelve 0, MEDIUM devuelve 1, LOW devuelve 1
 y todas las severidades devuelven 1. CI ejecuta además los tests en el build JDK
 MUSL de cada arquitectura y comprueba ausencia de Expat/fontconfig/libiberty.
 
-Faltan CI nativo ARM64/AMD64, publicación y verificación de los nuevos digests,
-ensayos finales por imagen y recuperación inversa del candidato publicado.
-Después siguen los gates Cloudflare y GO conjunto existentes. No se declara
-resuelta una imagen futura ni se interpreta el permiso operativo como aceptación
-del residual anterior. No se afirma ausencia universal de vulnerabilidades fuera
-del alcance/fecha de las comprobaciones.
+El candidato `f4a06e6` cerró CI y publicación nativos ARM64/AMD64 en
+[`40210687407`](https://github.com/Jair0305/battleship/actions/runs/40210687407).
+Sus ocho manifests publicados coinciden con los config digests de los reportes;
+los ocho reportes no contienen hallazgos de ninguna severidad. La DB del reporte
+final es del 25-Oct 12:57:48 UTC y Java DB del 25-Oct 00:59:20 UTC.
+
+Las imágenes exactas pasaron restauración y flujos completos en ARM64, y su dump
+posterior se restauró con huellas idénticas en AMD64 nativo. Se conservan nuevas
+escrituras y revocaciones; el esquema no cambia y todos los clones están
+detenidos. El [recibo final](../migration/evidence/musl-final-candidate-20261025.json)
+registra digests, hashes de reportes/SBOM y backups. El paquete nuevo de corte
+está validado, sin activar configuración ni servicios de producción.
+
+Siguen los gates operativos Cloudflare/TLS y GO conjunto existentes; después se
+requieren dump final, revocación y validación pública durante el corte aprobado.
+No se interpreta el permiso operativo como aceptación del residual anterior ni
+se afirma ausencia universal de vulnerabilidades fuera del alcance/fecha de
+las comprobaciones.

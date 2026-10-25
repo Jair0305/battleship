@@ -12,13 +12,24 @@ revocación de sesiones ni hotfix de producción.**
 Ubuntu no fue aceptado y `7b8733c` no puede promoverse. Se conserva como baseline.
 La [remediación acotada de la base](ubuntu-residual.md) prueba Alpine/Temurin MUSL
 con la misma versión Java, elimina dependencias afectadas y endurece CI a todas
-las severidades. Su ensayo ARM pasa; nuevo CI/publicación/AMD64 siguen pendientes.
-Las secciones anteriores describen evidencia histórica, no permiso de corte.
+las severidades. `f4a06e6` pasó nuevo CI y publicación nativos ARM64/AMD64
+[`40210687407`](https://github.com/Jair0305/battleship/actions/runs/40210687407).
+Los ocho digests publicados coinciden con sus configuraciones escaneadas; cero
+hallazgos en los ocho reportes de todas las severidades, con Trivy 0.76.1 y DB
+del 25-Oct 12:57 UTC, sin ignores ni exenciones.
+
+Las imágenes finales restauraron 16 tablas: ARM64 de 3.737 a 4.122 filas y AMD64
+nativo de 4.122 a 4.507. Pasaron WS/SockJS, ranking/chat, bloqueo de falsificación,
+reinicio y persistencia de cuentas/hashes/sesiones, manteniendo revocaciones y
+esquema. Los clones quedaron detenidos y sus escrituras nuevas respaldadas.
+El [recibo actual](../migration/evidence/musl-final-candidate-20261025.json)
+conserva ocho digests, hashes de reportes/SBOM y recuperación inversa. Las
+secciones sobre candidatos anteriores describen evidencia histórica.
 
 El candidato de runtimes `f9eaa42` pasó CI y los ensayos ARM64/AMD64 descritos
 abajo, con cero HIGH/CRITICAL en sus imágenes. El usuario autorizó después retirar
 la API antigua: el candidato actual añade ese retiro y el bloqueo de publicaciones
-STOMP de clientes. El candidato final `7b8733c` pasó nuevo CI/publicación y
+STOMP de clientes. El candidato histórico retirado `7b8733c` pasó CI/publicación y
 flujos de las imágenes exactas ARM64/AMD64; las imágenes anteriores no contienen
 este cierre. Los tokens emitidos antes del
 parche se revocarán durante el corte. El usuario confirmó que todas las cuentas
@@ -27,8 +38,9 @@ respaldos. No se acepta riesgo en nombre del usuario.
 
 El usuario autorizó la ventana condicionada de 5–10 minutos y posible reconexión
 RTC/POM; el coordinador gestiona Cloudflare y el GO con Cleanly. No falta pedir
-esa misma ventana: faltan sus condiciones operativas y el tratamiento del
-residual documentado. Véase el [recibo final](../migration/evidence/final-candidate-20261025.json).
+esa misma ventana: faltan Cloudflare/TLS, GO coordinado y la ejecución/validación
+del corte con datos frescos. El residual se trató en el nuevo candidato, sin
+aceptarlo ni promover `7b8733c`.
 
 Se preservan `/opt/battleship`, únicamente los binds de aplicación
 `127.0.0.1:3006/3007`, backups y artefactos originales. El TLS de prueba corre
@@ -310,7 +322,8 @@ prueba se corrigieron antes de este ensayo completo. El
 [recibo del cierre](../migration/evidence/legacy-retirement-20261025.json)
 distingue estas pruebas del ensayo posterior de las imágenes finales.
 
-La publicación final `40197918658` aprobó `7b8733c` en ARM64 y AMD64, sin deploy.
+La publicación histórica `40197918658` aprobó `7b8733c` en ARM64 y AMD64, sin deploy;
+ese candidato quedó retirado por el residual rechazado después por el usuario.
 Se cotejaron los ocho manifests por digest con el config digest de cada reporte
 escaneado. Después, las imágenes exactas restauraron y probaron 16 tablas:
 ARM64 de 2.966 a 3.352 filas; su dump con escrituras nuevas se restauró con huellas

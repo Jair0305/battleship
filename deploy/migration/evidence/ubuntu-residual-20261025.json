@@ -472,7 +472,7 @@
     "client_stomp_spoof_rejected": "passed",
     "scope": "isolated local MUSL backend plus previously published frontend/PostgreSQL/Nginx; not a final new publication"
   },
-  "ci_and_native_amd64": "pending",
+  "ci_and_native_amd64": "passed: f4a06e6 published in run 40210687407; final native ARM/AMD recovery passed",
   "jar_equivalence": {
     "compiled_classes_identical": 79,
     "dependency_jars_identical": 73,
@@ -492,5 +492,6 @@
     "java_trust": "fba23c018568726a9d5653c19a1c0df6d1b37050aa63b2caa5a46a610a713981",
     "runtime_inventory": "0606fc1f11f159b4946b9aa3019d307659aab522269db950ed9012a44f206b18",
     "functional": "b784f8b519b6b4426265cae0512ce13a337e7ca6f39eefd4081171da2ee6ded2"
-  }
+  },
+  "final_published_evidence": "musl-final-candidate-20261025.json"
 }
