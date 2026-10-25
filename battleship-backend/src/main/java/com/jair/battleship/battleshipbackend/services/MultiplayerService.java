@@ -157,10 +157,10 @@ public class MultiplayerService {
                 .sorted(Comparator.comparing(Sala::getId))
                 .map(sala -> roomSnapshot(sala, null))
                 .toList();
-        List<SessionUser> online = sesionRepository.findAll().stream()
+        List<PublicPlayer> online = sesionRepository.findAll().stream()
                 .sorted(Comparator.comparing(SesionJugador::getLastSeenAt).reversed())
                 .limit(50)
-                .map(this::toSessionUser)
+                .map(this::toPublicPlayer)
                 .toList();
         return new LobbySnapshot(rooms, online);
     }
@@ -1245,6 +1245,12 @@ public class MultiplayerService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesion invalida"));
         session.setLastSeenAt(Instant.now());
         return sesionRepository.save(session);
+    }
+
+    private PublicPlayer toPublicPlayer(SesionJugador session) {
+        SessionUser user = toSessionUser(session);
+        return new PublicPlayer(user.id(), user.displayName(), user.guest(), user.usuarioId(),
+                user.rating(), user.gamesPlayed(), user.wins(), user.losses());
     }
 
     private SessionUser toSessionUser(SesionJugador session) {

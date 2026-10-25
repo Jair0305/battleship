@@ -36,7 +36,9 @@ public class Partida {
     // turnoActual: id del jugador que debe jugar
     private Long turnoActualJugadorId;
 
+    @Column(name = "rematch_requestj1")
     private boolean rematchRequestJ1 = false;
+    @Column(name = "rematch_requestj2")
     private boolean rematchRequestJ2 = false;
 
     private Instant rematchDeadline;

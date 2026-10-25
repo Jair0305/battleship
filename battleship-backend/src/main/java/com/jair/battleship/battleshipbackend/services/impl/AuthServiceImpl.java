@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+
 @Service
 public class AuthServiceImpl implements AuthService {
 
@@ -20,6 +22,9 @@ public class AuthServiceImpl implements AuthService {
         }
         if (password == null || password.isBlank()) {
             throw new IllegalArgumentException("password requerido");
+        }
+        if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("password debe tener como máximo 72 bytes UTF-8");
         }
         if (!password.equals(passwordConfirm)) {
             throw new IllegalArgumentException("las contraseñas no coinciden");
@@ -35,6 +40,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Usuario login(String username, String password) {
+        if (password == null || password.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("credenciales inválidas");
+        }
         Usuario u = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("credenciales inválidas"));
         if (!passwordEncoder.matches(password, u.getPasswordHash())) {

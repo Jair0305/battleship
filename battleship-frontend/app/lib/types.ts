@@ -88,7 +88,7 @@ export type RoomSnapshot = {
 
 export type LobbySnapshot = {
   salas: RoomSnapshot[]
-  onlinePlayers: SessionUser[]
+  onlinePlayers: Omit<SessionUser, 'token'>[]
 }
 
 export type ShipPlacement = {

@@ -24,9 +24,11 @@ import com.jair.battleship.battleshipbackend.repositories.TableroRepository;
 import com.jair.battleship.battleshipbackend.repositories.UsuarioRepository;
 import com.jair.battleship.battleshipbackend.services.MultiplayerService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.scheduling.annotation.ScheduledAnnotationBeanPostProcessor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -41,6 +43,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 @ActiveProfiles("test")
 class MultiplayerServiceClassicRulesTests {
+
+    @BeforeAll
+    static void stopBackgroundTimer(@Autowired ScheduledAnnotationBeanPostProcessor scheduler) {
+        // Tests invoke the real timeout actions explicitly; avoid a competing wall-clock tick.
+        scheduler.getScheduledTasks().forEach(task -> task.cancel(false));
+    }
 
     private static final List<String> CLASSIC_CELLS = List.of(
             "A1", "A2", "A3", "A4",
@@ -86,6 +94,18 @@ class MultiplayerServiceClassicRulesTests {
         sesionRepository.deleteAll();
         usuarioRepository.deleteAll();
         salaRepository.deleteAll();
+    }
+
+    @Test
+    void publicLobbyExcludesCredentialsWhilePrivateSessionsRetainTheirTokens() throws Exception {
+        SessionUser alpha = service.createGuest("Public Alpha");
+        SessionUser bravo = service.createGuest("Public Bravo");
+        var lobby = service.lobby(null);
+        String json = tools.jackson.databind.json.JsonMapper.builder().build()
+                .writeValueAsString(lobby.onlinePlayers());
+        assertThat(json).contains("Public Alpha", "Public Bravo")
+                .doesNotContain(alpha.token(), bravo.token(), "\"token\"", "passwordHash");
+        assertThat(service.currentSession(alpha.token()).token()).isEqualTo(alpha.token());
     }
 
     @Test
