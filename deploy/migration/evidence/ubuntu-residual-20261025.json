@@ -1,0 +1,496 @@
+{
+  "production_changed": false,
+  "user_accepted_residual": false,
+  "old_candidate_promotable": false,
+  "old_findings": [
+    {
+      "VulnerabilityID": "CVE-2026-102473",
+      "PkgName": "dash",
+      "InstalledVersion": "0.5.11+git20210903+057cd650a4ed-3build1",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-102473"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-102474",
+      "PkgName": "dash",
+      "InstalledVersion": "0.5.11+git20210903+057cd650a4ed-3build1",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-102474"
+    },
+    {
+      "VulnerabilityID": "CVE-2022-27943",
+      "PkgName": "gcc-12-base",
+      "InstalledVersion": "12.3.0-1ubuntu1~22.04.3",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2022-27943"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-18374",
+      "PkgName": "libc-bin",
+      "InstalledVersion": "2.35-0ubuntu3.15",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-18374"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-89092",
+      "PkgName": "libc-bin",
+      "InstalledVersion": "2.35-0ubuntu3.15",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-89092"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-18374",
+      "PkgName": "libc6",
+      "InstalledVersion": "2.35-0ubuntu3.15",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-18374"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-89092",
+      "PkgName": "libc6",
+      "InstalledVersion": "2.35-0ubuntu3.15",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-89092"
+    },
+    {
+      "VulnerabilityID": "CVE-2025-66382",
+      "PkgName": "libexpat1",
+      "InstalledVersion": "2.4.7-1ubuntu0.9",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2025-66382"
+    },
+    {
+      "VulnerabilityID": "CVE-2022-27943",
+      "PkgName": "libgcc-s1",
+      "InstalledVersion": "12.3.0-1ubuntu1~22.04.3",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2022-27943"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-67693",
+      "PkgName": "libgnutls30",
+      "InstalledVersion": "3.7.3-4ubuntu1.9",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-67693"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-88647",
+      "PkgName": "libgnutls30",
+      "InstalledVersion": "3.7.3-4ubuntu1.9",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-88647"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-88648",
+      "PkgName": "libgnutls30",
+      "InstalledVersion": "3.7.3-4ubuntu1.9",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-88648"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-95184",
+      "PkgName": "libgnutls30",
+      "InstalledVersion": "3.7.3-4ubuntu1.9",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-95184"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-95209",
+      "PkgName": "libgnutls30",
+      "InstalledVersion": "3.7.3-4ubuntu1.9",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-95209"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-95210",
+      "PkgName": "libgnutls30",
+      "InstalledVersion": "3.7.3-4ubuntu1.9",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-95210"
+    },
+    {
+      "VulnerabilityID": "CVE-2023-50495",
+      "PkgName": "libncurses6",
+      "InstalledVersion": "6.3-2ubuntu0.3",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2023-50495"
+    },
+    {
+      "VulnerabilityID": "CVE-2023-50495",
+      "PkgName": "libncursesw6",
+      "InstalledVersion": "6.3-2ubuntu0.3",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2023-50495"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-103111",
+      "PkgName": "libpcre2-8-0",
+      "InstalledVersion": "10.39-3ubuntu0.1",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-103111"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-86145",
+      "PkgName": "libpcre2-8-0",
+      "InstalledVersion": "10.39-3ubuntu0.1",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-86145"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-89156",
+      "PkgName": "libpcre2-8-0",
+      "InstalledVersion": "10.39-3ubuntu0.1",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-89156"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-89157",
+      "PkgName": "libpcre2-8-0",
+      "InstalledVersion": "10.39-3ubuntu0.1",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-89157"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-89158",
+      "PkgName": "libpcre2-8-0",
+      "InstalledVersion": "10.39-3ubuntu0.1",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-89158"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-89160",
+      "PkgName": "libpcre2-8-0",
+      "InstalledVersion": "10.39-3ubuntu0.1",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-89160"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-89161",
+      "PkgName": "libpcre2-8-0",
+      "InstalledVersion": "10.39-3ubuntu0.1",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-89161"
+    },
+    {
+      "VulnerabilityID": "CVE-2022-41409",
+      "PkgName": "libpcre2-8-0",
+      "InstalledVersion": "10.39-3ubuntu0.1",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2022-41409"
+    },
+    {
+      "VulnerabilityID": "CVE-2022-27943",
+      "PkgName": "libstdc++6",
+      "InstalledVersion": "12.3.0-1ubuntu1~22.04.3",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2022-27943"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-40228",
+      "PkgName": "libsystemd0",
+      "InstalledVersion": "249.11-0ubuntu3.22",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-40228"
+    },
+    {
+      "VulnerabilityID": "CVE-2023-50495",
+      "PkgName": "libtinfo6",
+      "InstalledVersion": "6.3-2ubuntu0.3",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2023-50495"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-40228",
+      "PkgName": "libudev1",
+      "InstalledVersion": "249.11-0ubuntu3.22",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-40228"
+    },
+    {
+      "VulnerabilityID": "CVE-2022-4899",
+      "PkgName": "libzstd1",
+      "InstalledVersion": "1.4.8+dfsg-3build1",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2022-4899"
+    },
+    {
+      "VulnerabilityID": "CVE-2023-29383",
+      "PkgName": "login",
+      "InstalledVersion": "1:4.8.1-2ubuntu2.2",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2023-29383"
+    },
+    {
+      "VulnerabilityID": "CVE-2024-56433",
+      "PkgName": "login",
+      "InstalledVersion": "1:4.8.1-2ubuntu2.2",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2024-56433"
+    },
+    {
+      "VulnerabilityID": "CVE-2023-50495",
+      "PkgName": "ncurses-base",
+      "InstalledVersion": "6.3-2ubuntu0.3",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2023-50495"
+    },
+    {
+      "VulnerabilityID": "CVE-2023-50495",
+      "PkgName": "ncurses-bin",
+      "InstalledVersion": "6.3-2ubuntu0.3",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2023-50495"
+    },
+    {
+      "VulnerabilityID": "CVE-2023-29383",
+      "PkgName": "passwd",
+      "InstalledVersion": "1:4.8.1-2ubuntu2.2",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2023-29383"
+    },
+    {
+      "VulnerabilityID": "CVE-2024-56433",
+      "PkgName": "passwd",
+      "InstalledVersion": "1:4.8.1-2ubuntu2.2",
+      "Severity": "LOW",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2024-56433"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-18477",
+      "PkgName": "tar",
+      "InstalledVersion": "1.34+dfsg-1ubuntu0.1.22.04.6",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-18477"
+    },
+    {
+      "VulnerabilityID": "CVE-2026-18508",
+      "PkgName": "tar",
+      "InstalledVersion": "1.34+dfsg-1ubuntu0.1.22.04.6",
+      "Severity": "MEDIUM",
+      "FixedVersion": null,
+      "Status": "affected",
+      "ubuntu_tracker": "https://ubuntu.com/security/CVE-2026-18508"
+    }
+  ],
+  "old_distinct_cves": 27,
+  "new_os": {
+    "Family": "alpine",
+    "Name": "3.24.3"
+  },
+  "new_scanned_config": "sha256:e3c2b8e19a994a8d8fdeb7d8e9a68fda010bfb90b5ac66cc69b1d360e8413928",
+  "new_local_reference": "battleship-backend:alpine-security-20261025",
+  "new_findings": [],
+  "new_os_packages": [
+    {
+      "name": "alpine-baselayout",
+      "version": "3.7.2-r1"
+    },
+    {
+      "name": "alpine-baselayout-data",
+      "version": "3.7.2-r1"
+    },
+    {
+      "name": "alpine-keys",
+      "version": "2.6-r0"
+    },
+    {
+      "name": "alpine-release",
+      "version": "3.24.3-r0"
+    },
+    {
+      "name": "apk-tools",
+      "version": "3.0.8-r0"
+    },
+    {
+      "name": "busybox",
+      "version": "1.37.0-r31"
+    },
+    {
+      "name": "busybox-binsh",
+      "version": "1.37.0-r31"
+    },
+    {
+      "name": "ca-certificates",
+      "version": "20261020-r0"
+    },
+    {
+      "name": "ca-certificates-bundle",
+      "version": "20261020-r0"
+    },
+    {
+      "name": "libapk",
+      "version": "3.0.8-r0"
+    },
+    {
+      "name": "libcrypto3",
+      "version": "3.5.9-r0"
+    },
+    {
+      "name": "libgcc",
+      "version": "15.2.0-r5"
+    },
+    {
+      "name": "libintl",
+      "version": "1.0-r0"
+    },
+    {
+      "name": "libssl3",
+      "version": "3.5.9-r0"
+    },
+    {
+      "name": "libstdc++",
+      "version": "15.2.0-r5"
+    },
+    {
+      "name": "musl",
+      "version": "1.2.6-r3"
+    },
+    {
+      "name": "musl-locales",
+      "version": "0.1.0-r1"
+    },
+    {
+      "name": "musl-locales-lang",
+      "version": "0.1.0-r1"
+    },
+    {
+      "name": "musl-utils",
+      "version": "1.2.6-r3"
+    },
+    {
+      "name": "scanelf",
+      "version": "1.3.9-r1"
+    },
+    {
+      "name": "ssl_client",
+      "version": "1.37.0-r31"
+    },
+    {
+      "name": "tzdata",
+      "version": "2026e-r0"
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.2-r1"
+    }
+  ],
+  "new_scan_sha256": "224754d2fe28c5f58ccdc6c9a2b17330f2d8a356fb73a4d8a43240004bc82147",
+  "new_sbom_sha256": "6db4fac774152ba804880076c3025286d66844f9fd18500bf75363129359567b",
+  "java_version": "Temurin21.0.13+9 MUSL",
+  "java_blocklist_preserved": true,
+  "backend_tests_arm_musl": 26,
+  "java_trust": "untreated14accepted/treated14blocked/default14rejected/HTTPSpositive",
+  "scan_database": "Version: 0.76.1\nVulnerability DB:\n  Version: 2\n  UpdatedAt: 2026-10-25 01:20:33.190884269 +0000 UTC\n  NextUpdate: 2026-10-26 01:20:33.190871941 +0000 UTC\n  DownloadedAt: 2026-10-25 06:10:25.823521512 +0000 UTC\nJava DB:\n  Version: 1\n  UpdatedAt: 2026-10-25 00:59:20.065031654 +0000 UTC\n  NextUpdate: 2026-10-28 00:59:20.065031063 +0000 UTC\n  DownloadedAt: 2026-10-25 06:11:11.263475908 +0000 UTC\n",
+  "functional_arm": {
+    "architecture": "arm64",
+    "status": "passed",
+    "exact_image_configs_checked": 4,
+    "restored_tables": 16,
+    "restored_rows": 3352,
+    "after_tables": 16,
+    "after_rows": 3737,
+    "schema_sha256": "8110579202dbb1f6337e3c96ae2517bb18e04f5e8fbf4c51dc2d76f1a8271ecc",
+    "new_writes_backup_sha256": "057f4931c69db500406e25c3d1a1698eb83ebe6b8903813089603e72769d55e7",
+    "revocation_preserved": true,
+    "full_stack_restart": "passed",
+    "websocket_ranked": "passed",
+    "sockjs_polling_ranked": "passed",
+    "client_stomp_spoof_rejected": "passed",
+    "scope": "isolated local MUSL backend plus previously published frontend/PostgreSQL/Nginx; not a final new publication"
+  },
+  "ci_and_native_amd64": "pending",
+  "jar_equivalence": {
+    "compiled_classes_identical": 79,
+    "dependency_jars_identical": 73,
+    "trial_resource_difference": "application.properties CRLF from Windows context; normalized contents identical; CI uses canonical Git LF",
+    "candidate_jar_sha256": "a9e8a2f8c01d220cfc1f27226fa4db27ba68e15efdefa154b951d0a76bb2dbd2"
+  },
+  "native_linkage": "java interpreter /lib/ld-musl-aarch64.so.1; libjvm uses libc.musl-aarch64.so.1; shared libgcc/libstdc++15.2.0; no Expat/fontconfig/libiberty files",
+  "strict_gate_negative_control": {
+    "input": "original CI report SHA256 verified; old image re-scan failed exporter before JSON and is not counted",
+    "HIGH_CRITICAL": 0,
+    "MEDIUM": 1,
+    "LOW": 1,
+    "ALL_SEVERITIES": 1
+  },
+  "private_log_sha256": {
+    "build": "747c075ce6fb9022b2af8a122857dc99000c7176795dc79b6e1dec76d3847ceb",
+    "java_trust": "fba23c018568726a9d5653c19a1c0df6d1b37050aa63b2caa5a46a610a713981",
+    "runtime_inventory": "0606fc1f11f159b4946b9aa3019d307659aab522269db950ed9012a44f206b18",
+    "functional": "b784f8b519b6b4426265cae0512ce13a337e7ca6f39eefd4081171da2ee6ded2"
+  }
+}

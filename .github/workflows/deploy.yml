@@ -92,6 +92,7 @@ jobs:
           load: true
           platforms: linux/${{ matrix.arch }}
           tags: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}-${{ matrix.arch }}
+          build-args: MAVEN_SKIP_TESTS=false
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -139,6 +140,7 @@ jobs:
         run: |
           docker run --rm --entrypoint node "$FRONTEND_IMAGE:$IMAGE_TAG" -p 'JSON.stringify(process.versions)'
           docker run --rm --entrypoint java "$BACKEND_IMAGE:$IMAGE_TAG" -version
+          docker run --rm --entrypoint sh "$BACKEND_IMAGE:$IMAGE_TAG" -ec 'test "$(id -u)" = 10001; test -f /etc/alpine-release; test -z "$(find /lib /usr/lib /opt/java/openjdk -iname "*expat*" -o -iname "*fontconfig*" -o -name "libiberty*")"'
           docker run --rm --entrypoint sh "$DATABASE_IMAGE:$IMAGE_TAG" -ec 'postgres --version; gosu nobody id; gosu postgres id'
           docker run --rm --entrypoint nginx "$PROXY_IMAGE:$IMAGE_TAG" -v
 

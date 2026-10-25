@@ -5,6 +5,11 @@ Fecha de evidencia: 2026-10-25 UTC (2026-10-24 en México).
 El usuario autorizó el corte condicionado a cerrar los gates restantes; todavía
 no se ha ejecutado.**
 
+**El usuario rechazó el residual Ubuntu de `7b8733c`: no promover ese candidato.**
+Se conserva su evidencia como histórica; la [remediación actual](../security/ubuntu-residual.md)
+cambia la base del backend a Alpine/MUSL y debe cerrar nuevos CI/digests/ensayos
+antes del GO. La autorización de ventana sigue condicionada, sin aceptación de riesgo.
+
 **Actualización de seguridad:** la instrucción posterior del usuario autoriza
 parches mínimos de runtimes, dependencias y código. La tabla siguiente describe
 el ensayo de paridad histórico, no el candidato actual. El candidato de corte

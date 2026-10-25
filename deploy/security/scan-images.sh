@@ -33,7 +33,7 @@ for image in "$@"; do
     --cache-dir "$output/cache" --timeout 15m --output "$output/reports/image-$index.json" "$image"
   "$tool" convert --ignorefile '' --format cyclonedx \
     --output "$output/reports/image-$index.cdx.json" "$output/reports/image-$index.json"
-  "$tool" convert --ignorefile '' --severity HIGH,CRITICAL --exit-code 1 \
+  "$tool" convert --ignorefile '' --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --exit-code 1 \
     "$output/reports/image-$index.json" || status=1
 done
 "$tool" --cache-dir "$output/cache" --version > "$output/reports/scanner-version.txt"

@@ -120,13 +120,13 @@
   "cutover_authorization": {
     "source_thread": "import:codex:01a0a42a-72f0-7f03-a270-b007dc081dd6",
     "utc_approx": "2026-10-25T14:40:00Z",
-    "user_response": "S\u00ed, ejecutar cuando est\u00e9n verificadas las condiciones restantes",
+    "user_response": "Sí, ejecutar cuando estén verificadas las condiciones restantes",
     "scope": "Battleship 5-10min and shared reload may disconnect RTC/POM; conditioned on remaining gates"
   },
   "pr_ci_run": 40197284772,
   "pr_ci_conclusion": "success",
   "publication_conclusion": "success",
-  "artifacts_ready": true,
+  "artifacts_ready": false,
   "drills": {
     "arm64": {
       "architecture": "arm64",
@@ -206,7 +206,7 @@
     "user_action_communicated_by_coordinator": "reinstall Browser plugin through supported UI; Chrome only, no inferred logout or manual host repair",
     "cloudflare_baseline_received": false,
     "joint_go_received": false,
-    "ubuntu_residual_user_decision": "pending separately from operational window approval",
+    "ubuntu_residual_user_decision": "No, resolverlo antes de migrar",
     "source_writer": "running original revision; not drained",
     "clone_writers": "stopped",
     "shared_build_and_proxy_locks": "released"
@@ -216,5 +216,6 @@
     "documented vendor-unfixed Ubuntu residual risk disposition",
     "final writer freeze/dump/restore/revocation and public TLS/functional validation during authorized cut",
     "CI target/marker and project backup activation only after real successful cut"
-  ]
+  ],
+  "promotion_status": "withdrawn: user explicitly rejected unresolved Ubuntu residual"
 }

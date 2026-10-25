@@ -8,6 +8,13 @@ revocación de sesiones ni hotfix de producción.**
 
 ## Estado y límites
 
+**Decisión posterior del usuario: «No, resolverlo antes de migrar».** El residual
+Ubuntu no fue aceptado y `7b8733c` no puede promoverse. Se conserva como baseline.
+La [remediación acotada de la base](ubuntu-residual.md) prueba Alpine/Temurin MUSL
+con la misma versión Java, elimina dependencias afectadas y endurece CI a todas
+las severidades. Su ensayo ARM pasa; nuevo CI/publicación/AMD64 siguen pendientes.
+Las secciones anteriores describen evidencia histórica, no permiso de corte.
+
 El candidato de runtimes `f9eaa42` pasó CI y los ensayos ARM64/AMD64 descritos
 abajo, con cero HIGH/CRITICAL en sus imágenes. El usuario autorizó después retirar
 la API antigua: el candidato actual añade ese retiro y el bloqueo de publicaciones
@@ -201,7 +208,7 @@ en el backup privado de rollback. No restaurar después tokens comprometidos.
   dos imágenes, validación antes de pausar ingreso y política Java idempotente.
   Se repitieron con las cuatro variables de imágenes presentes en el entorno.
 - El scanner elimina opciones `TRIVY_*` heredadas, desactiva config automática,
-  recoge todas las severidades y aplica después HIGH/CRITICAL. Un entorno/cwd
+  recoge todas las severidades y ahora falla ante cualquier hallazgo. Un entorno/cwd
   hostil que pide solo LOW no ocultó un HIGH conocido: el gate devolvió 1.
 - Trivy 0.76.1, DB de vulnerabilidades `2026-10-25T01:20:33Z`, Java DB
   `2026-10-25T00:59:20Z`. Cuatro JSON completos y cuatro SBOM CycloneDX, sin
@@ -212,8 +219,9 @@ en el backup privado de rollback. No restaurar después tokens comprometidos.
   corregida informada por el scanner. Permanecen abiertos, con detalle en el
   recibo. Por ejemplo, Ubuntu confirma que
   [CVE-2026-18374](https://ubuntu.com/security/CVE-2026-18374) sigue sin parche
-  en Jammy. No se cambia de distribución ni se aplica un backport local no
-  soportado para ocultarlos; su evaluación residual debe acordarse antes del corte.
+  en Jammy. El usuario rechazó ese residual: ahora se cambia la base y se eliminan
+  los componentes afectados, según la [remediación](ubuntu-residual.md), sin
+  supresiones ni backports locales no soportados.
 - La verificación Java usa 14 cadenas públicas y raíces de fixture fijadas por
   SHA256. Una JVM efímera sin red, app o datos prueba el control sin los 16 bloqueos;
   otra, con las mismas raíces **solo en memoria**, exige rechazo por el bloqueo.
