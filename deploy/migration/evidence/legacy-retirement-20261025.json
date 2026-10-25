@@ -1,0 +1,84 @@
+{
+  "utc": "2026-10-25T13:16:13Z",
+  "source_parent_commit": "8dc14f70e5832cacb61da3646694d300511a7f7c",
+  "production_cutover_performed": false,
+  "production_hotfix_performed": false,
+  "production_sessions_revoked": false,
+  "dns_changed": false,
+  "shared_proxy_reloaded": false,
+  "user_decisions": {
+    "legacy_api": "remove unused routes",
+    "existing_accounts": "all test data; no real users or individual access recovery required",
+    "cutover_confirmation": "still required"
+  },
+  "changes": {
+    "retired_http_operations": 28,
+    "retired_http_roots": ["/api/partidas", "/api/sala", "/api/juego", "/api/chat"],
+    "retired_stomp_handler": "/app/juego/disparo",
+    "client_stomp_publications": "rejected on clientInboundChannel",
+    "server_publications_and_subscriptions": "preserved",
+    "schema_changes": false,
+    "data_deleted": false
+  },
+  "source_sha256": {
+    "WebSocketConfig.java": "976d8c4e3de11ce69a7cfb81d3b2ee6f6c0cda44446b3c3439a88b213c92e200",
+    "smoke.mjs": "19eb54c4c031454196ff0ce34728c8dc1340e1929df53d9cf8631a432c241861",
+    "stomp-frames.mjs": "1423d713746924982057642f01d1e4fbc6f9a231039ad36873fc5202c318fc66",
+    "stomp-frames.test.mjs": "e1e8e6408ed6b405dd16bbfddf523cca7d5f0ec455dd3300eecd1b9809d10346",
+    "revoke-exposed-sessions.sql": "725d4e9ec5e84d8d06139fec43ecb80bc8aec801b1221d936899cbaa2e0a1036"
+  },
+  "tests": {
+    "backend_arm64": {"tests": 26, "failures": 0, "errors": 0},
+    "broker_counterfactual_without_interceptor": "failed as expected: client publication accepted",
+    "node_frame_log_tests": {"tests": 5, "failures": 0},
+    "actionlint": "passed",
+    "independent_reviews": "rounds 3 and 4: no actionable findings; local read-only scope"
+  },
+  "arm_functional_drill": {
+    "scope": "new JAR mounted on previously scanned/published f9 runtime; does not certify a final new image",
+    "private_root": "/opt/battleship/security/legacy-retirement-20261025",
+    "jar_sha256": "c77304b33d529d4b7cc7ab446142e00a1252fca2c60ba66fad86799aac1327fd",
+    "jar_controllers_absent": true,
+    "jar_mssql_driver_absent": true,
+    "http_websocket_ranked": "passed",
+    "http_sockjs_polling_ranked": "passed",
+    "forged_chat_rejected_with_authentic_chat_positive_control": "passed with exact content and retained history",
+    "private_player_stats_and_public_top_ten": "passed",
+    "spectator_privacy_rematch_resign_leave": "passed",
+    "full_stack_restart_account_hash_session": "passed",
+    "tables": 16,
+    "rows_before": 2579,
+    "rows_after": 2964,
+    "schema_before_equals_after": true,
+    "schema_sha256": "8110579202dbb1f6337e3c96ae2517bb18e04f5e8fbf4c51dc2d76f1a8271ecc",
+    "before_dump_sha256": "82c5407c9e19ead712eb4831d225573d49f4f5990b4024f666cc6945dded5ba4",
+    "after_dump_sha256": "1f5c01dacb91733c93905c9b6b5884e700290e724c6dd78983ca9393e023768f",
+    "private_log_sha256": "91ecb5262d7a679e96f162b691eacdb90feec49e06fb11aad6d1a745a3b7fdb6",
+    "backend_test_log_sha256": "6e9f51f63bd5439f2d8f449d3c63d712f215ad076b15a660a79118b0d09bfa46",
+    "earlier_failed_attempts": "retained privately; corrected top-ten assumption and test-source read permissions before this successful full drill"
+  },
+  "session_rotation_clone_only": {
+    "status": "passed",
+    "old_sessions_http_401": 83,
+    "distinct_tokens_rotated": 83,
+    "both_credential_columns_and_matching_mirrors": "passed",
+    "all_noncredential_rows_hashes_links_history_unchanged": true,
+    "active_deadline_refuses_without_credential_changes": "passed",
+    "existing_hash_login": "passed",
+    "new_guest_and_private_session": "passed",
+    "before_and_after_rotation_rows": 2964,
+    "after_functional_controls_rows": 2966,
+    "before_dump_sha256": "b202963721ef9da0d3da80ff3e513940254314f7620919dd65b1f1a9ef2cb9e6",
+    "after_rotation_dump_sha256": "7b39f5ff3ece12bdc75c7e695b32e67c46e831dd670f7320423f16ef75f97f71",
+    "after_functional_dump_sha256": "2289b412bbd9ecc3803f597851f8c4ff50123bb2033703efc881eaea37eaa0fe",
+    "private_log_sha256": "c314b9c18b608c00818a24f7b8ec3d6d8ecb1ad726f4fa3a998e69a7fb48bb35",
+    "writers_and_database_stopped_after_drill": true
+  },
+  "remaining_gates": [
+    "new commit CI and ARM64/AMD64 publication plus exact-image scans and functional/recovery drills",
+    "residual vendor-unfixed MEDIUM/LOW findings remain documented, not silently accepted",
+    "verified Cloudflare account/zone and project-specific DNS baseline",
+    "coordinated persistent ingress and RTC neighbor continuity",
+    "explicit user cutover window confirmation; production revocation only inside that window"
+  ]
+}

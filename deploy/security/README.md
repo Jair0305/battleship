@@ -8,11 +8,14 @@ revocación de sesiones ni hotfix de producción.**
 
 ## Estado y límites
 
-El candidato ARM64 pasa las pruebas descritas abajo y el gate de imágenes
-HIGH/CRITICAL. Eso no certifica toda la aplicación: la API legacy sin autorización,
-los tokens emitidos antes del parche y la recuperación de acceso siguen siendo
-bloqueos de promoción. CI de `f9eaa42` y los ensayos de las imágenes publicadas
-ARM64/AMD64 ya pasaron. No se acepta riesgo en nombre del usuario.
+El candidato de runtimes `f9eaa42` pasó CI y los ensayos ARM64/AMD64 descritos
+abajo, con cero HIGH/CRITICAL en sus imágenes. El usuario autorizó después retirar
+la API antigua: el candidato actual añade ese retiro y el bloqueo de publicaciones
+STOMP de clientes. Requiere nuevo CI, artefactos y flujos antes de promoverlo;
+las imágenes anteriores no contienen este cierre. Los tokens emitidos antes del
+parche se revocarán durante el corte. El usuario confirmó que todas las cuentas
+son de prueba y no requieren recuperación individual; se conservan datos y
+respaldos. No se acepta riesgo en nombre del usuario.
 
 Se preservan `/opt/battleship`, únicamente los binds de aplicación
 `127.0.0.1:3006/3007`, backups y artefactos originales. El TLS de prueba corre
@@ -92,7 +95,8 @@ de restauración de este archivo OCI nuevo. Los contextos de build excluyen
   por sí solo no evita todos los matches contra prefijos heredados. Se conservan
   hashes existentes válidos hasta ese límite. Un hash no identifica si el usuario
   había usado una contraseña más larga; no se hace rehash masivo ni truncamiento
-  silencioso. Recuperación pendiente para la única cuenta real si la necesita.
+  silencioso. El usuario confirmó que la cuenta existente es de prueba y no
+  requiere recuperar acceso individual; no hay usuarios reales todavía.
 - **Spring/Tomcat:** Boot 4.0.9 es la rama soportada mínima elegida; 3.5.16 fue
   la [última versión OSS de 3.5](https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/).
   El BOM cubre Framework 7.0.10, Security 7.0.8 y Tomcat 11.0.27. Los requisitos
@@ -140,12 +144,37 @@ de restauración de este archivo OCI nuevo. Los contextos de build excluyen
    suplantación en producción. Antes de abrir el candidato se necesita revocación
    de los tokens expuestos, con nuevo login para la cuenta y nueva sesión para
    invitados. Mantenerlos sería dejar utilizable la fuga anterior. No se realizó
-   aún: requiere acordar impacto/recuperación en la ventana autorizada.
-3. **API legacy HIGH abierta.** `/api/partidas`, `/api/sala`, `/api/juego`,
+   aún: se ejecutará en la ventana de corte autorizada. El usuario confirmó que
+   todas son sesiones de prueba y pidió continuar sin recuperación individual.
+   [revoke-exposed-sessions.sql](../migration/revoke-exposed-sessions.sql) rota
+   atómicamente las credenciales y sus copias en `jugador`, conserva filas y
+   rechaza partidas/deadlines activos. No cambia hashes ni historial. Requiere
+   ingreso/backend/scheduler detenidos y backup lógico verificado previo.
+   En el clon privado, las 83 sesiones anteriores dieron 401 después de rotar;
+   se preservaron las 2.964 filas y todos sus campos ajenos a credenciales,
+   incluidos hashes y relaciones. Un deadline activo rechazó la operación sin
+   cambiar tokens; login existente, sesión privada e invitado nuevo pasaron.
+   Las dos filas nuevas de esos controles quedaron en un backup posterior.
+   Estos números son del clon ampliado por ensayos, no del origen con siete
+   sesiones observado antes. Producción no fue revocada.
+3. **API legacy HIGH retirada del candidato con autorización del usuario.** `/api/partidas`, `/api/sala`, `/api/juego`,
    `/api/chat` y el handler STOMP antiguo aceptan operaciones por ID sin identidad
    suficiente y pueden exponer entidades. La UI actual usa `/api/mesas` y
-   `/api/salas`. El usuario tiene pendiente elegir retiro de rutas antiguas o
-   conservación con autorización. No se publicará el candidato con este acceso.
+   `/api/salas`. El usuario eligió retirar las rutas antiguas. Se eliminan sus
+   cuatro controladores HTTP y `JuegoWebSocketController`; no hay bandera para
+   reactivarlos. Las 28 operaciones HTTP antiguas deben devolver 404 y
+   `/app/juego/disparo` queda sin handler. Entidades, servicios internos y creación
+   inicial de salas se conservan, sin cambios de esquema ni borrado de datos.
+4. **Suplantación STOMP MEDIUM corregida en el candidato.** El broker también
+   aceptaba `SEND /topic/...` directamente, sin pasar por handlers o por el chat
+   HTTP autenticado. Permitía falsificar mensajes y el ranking mostrado, sin
+   cambiar puntos persistidos. Un interceptor en `clientInboundChannel` descarta
+   mensajes de publicación de clientes; conexiones, suscripciones y publicaciones
+   del servidor se conservan. La UI actual no publica por STOMP. La regresión con
+   Spring real primero confirmó que el canal aceptaba el `SEND`; después exige
+   rechazo y ausencia de entrega, con una publicación válida del servidor como
+   control positivo. El smoke añade un intento sintético de publicación, solo
+   contra el clon privado, y exige que el chat HTTP autenticado siga llegando.
 
 La fuga no justifica borrar cuentas/historial ni considerar un token antes
 expuesto como prueba suficiente de propiedad para recuperar una contraseña.
@@ -154,10 +183,14 @@ en el backup privado de rollback. No restaurar después tokens comprometidos.
 
 ## Verificación y alcance del escaneo
 
-- 22 pruebas backend ARM64: hashes fijos generados con Crypto 6.2.4, límites
+- 26 pruebas backend ARM64: hashes fijos generados con Crypto 6.2.4, límites
   ASCII/multibyte y rechazo de sufijos; reglas clásicas, privacidad, scoring y
   vencimientos. El timer se desactiva solo en tests que invocan acciones
   explícitamente; una prueba real separada comprueba el scheduler en ejecución.
+- El retiro añade inventario de los 28 handlers HTTP, ausencia del handler STOMP,
+  controles de API moderna y el rechazo de publicaciones en el broker real.
+  Cinco pruebas Node validan coincidencia exacta del payload y conservación del
+  historial de frames: esperar el chat válido no puede borrar una falsificación.
 - Cinco regresiones Linux para carrera de partidas, configuración antigua de
   dos imágenes, validación antes de pausar ingreso y política Java idempotente.
   Se repitieron con las cuatro variables de imágenes presentes en el entorno.
@@ -215,7 +248,7 @@ La recuperación de producción debe usar AMD64 **parcheado** y el dump de la ba
 que contenga las escrituras más nuevas, manteniendo revocaciones de seguridad.
 No volver DNS a la base vieja después de aceptar escrituras en phosrvr.
 
-## Imágenes publicadas y recuperación parcheada
+## Imágenes publicadas anteriores al retiro de la API antigua
 
 El [CI del PR](https://github.com/Jair0305/battleship/actions/runs/40171163140)
 pasó en ARM64 y AMD64. Su referencia de merge `84d1879` tiene el mismo árbol Git
@@ -250,6 +283,19 @@ del ensayo, no del despliegue ni del Docker global. Se conservan los volúmenes
 El [recibo](../migration/evidence/published-security-20261025.json) contiene
 digests completos, hashes de reportes/SBOM y evidencia por arquitectura.
 
+El JAR con retiro de API y bloqueo STOMP pasó además un ensayo ARM64 privado,
+montado sobre el runtime publicado anterior; **no es todavía la imagen final**.
+SHA256 del JAR: `c77304b33d529d4b7cc7ab446142e00a1252fca2c60ba66fad86799aac1327fd`.
+Pasaron partidas completas por WebSocket y SockJS polling, rechazo de chat
+falsificado con entrega del chat HTTP válido, ranking y estadísticas privadas,
+revancha, rendición y salida, y cuenta/hash/sesión tras reiniciar los cuatro
+servicios. Las 16 tablas pasaron de 2.579 a 2.964 filas de ensayo, con backups
+consistentes antes/después y el mismo hash de esquema. Se conservan los intentos
+fallidos: una expectativa incorrecta de top diez y permisos del archivo de
+prueba se corrigieron antes de este ensayo completo. El
+[recibo del cierre](../migration/evidence/legacy-retirement-20261025.json)
+distingue estas pruebas de la publicación/escaneo todavía pendientes.
+
 La comprobación posterior al fallo de transporte SSH encontró íntegro y estable
 el archivo ARM64 de recuperación anterior: mismo SHA256 y CRC gzip válido,
 sin procesos tar/gzip pendientes. No se repitió ese build ni se borraron originales.
@@ -270,10 +316,11 @@ después de parar escritores. Si aparece actividad en vuelo, reabre el backend
 anterior sin cambiar configuración/base. Fallos posteriores conservan el backup
 y dejan ingreso cerrado: no restauran automáticamente datos antiguos.
 
-Si Cloudflare/ingress siguen demorados, el candidato AMD64 de este mismo commit
-está preparado para **hotfix separado en nightly-int**. Antes de solicitar su ventana:
-resolver la API antigua y recuperación/revocación. CI, digests y restauración/
-flujos del candidato AMD64 parcheado ya están verificados. Proponer entonces una
+Si Cloudflare/ingress siguen demorados, preparar **hotfix separado en nightly-int**
+con las nuevas imágenes que incluyan el retiro de API y el bloqueo STOMP. El
+ensayo AMD64 de `f9eaa42` es evidencia histórica de compatibilidad, no el artefacto
+final para ese hotfix. Antes de solicitar su ventana, cerrar nuevo CI/publicación/
+flujos y recuperación/revocación de sesiones. Proponer entonces una
 sola ventana concreta, con rollback que conserve escrituras nuevas; no ejecutar
 interrupción por este documento. El procedimiento de migración y coordinación
 Cleanly/Caddy permanece en el [runbook](../migration/README.md).

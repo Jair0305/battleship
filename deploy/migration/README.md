@@ -16,9 +16,17 @@ ARM64/AMD64 verificadas por digest. Ambas arquitecturas pasaron restauración de
 16 tablas/1.622 filas, partidas con ranking por WebSocket/SockJS y persistencia
 tras reiniciar los cuatro servicios. Los clones terminaron con 2.007 filas y
 quedaron detenidos. Véanse [seguridad](../security/README.md) y el
-[recibo actualizado](evidence/published-security-20261025.json). La API antigua,
-revocación/recuperación de sesiones, acceso Cloudflare e ingress coordinado siguen
-pendientes; esta validación no autoriza abrir producción.
+[recibo actualizado](evidence/published-security-20261025.json). La revocación de
+sesiones, acceso Cloudflare e ingress coordinado siguen pendientes; esta
+validación no autoriza abrir producción. El usuario confirmó que las cuentas son
+de prueba y no requieren recuperación individual. El usuario autorizó
+después retirar la API antigua: se eliminan sus controladores HTTP/STOMP y se
+bloquean los `SEND` de clientes al broker. `f9eaa42` queda como baseline privado;
+el corte y el hotfix requieren imágenes nuevas con ese cierre, nuevo CI y flujos.
+El [ensayo posterior del JAR](evidence/legacy-retirement-20261025.json) pasó
+multijugador WebSocket/SockJS, bloqueo STOMP y persistencia con esquema intacto.
+La revocación se probó solo en el clon: 83 tokens anteriores rechazados, datos
+conservados y nuevos accesos válidos. Las imágenes finales siguen pendientes.
 
 ## Ensayo histórico de paridad
 
@@ -356,10 +364,10 @@ Condiciones previas pendientes:
 3. Commit y paquete revisados; respaldo e imágenes ARM64 existentes disponibles.
    Auditoría y CI del candidato corregido aprobados, sin omitir el gate.
 4. Confirmación explícita del usuario para este corte.
-5. Resolver los bloqueos de aplicación descritos en el documento de seguridad:
-   API legacy, sesiones previamente expuestas y recuperación de acceso. Las
-   imágenes AMD64 parcheadas para hotfix/rollback ya fueron publicadas y
-   probadas de forma privada; revalidar sus digests antes de usarlas.
+5. Cerrar los bloqueos de aplicación descritos en el documento de seguridad:
+   validar el retiro de API legacy autorizado y preparar la revocación de las
+   sesiones expuestas. Publicar y probar las nuevas imágenes ARM64/AMD64 con ese
+   retiro y bloqueo STOMP; no promover las imágenes anteriores de `f9eaa42`.
 
 Secuencia después de confirmar:
 
@@ -377,9 +385,14 @@ Secuencia después de confirmar:
 5. En phosrvr, crear `battleship_postgres_data` NUEVO, restaurar el dump FINAL,
    comparar huellas antes de iniciar backend y revisar secuencias/propietarios.
    Conservar el volumen preflight. No restaurar sobre el volumen original del origen.
-   Aplicar la revocación de sesiones expuestas acordada con el usuario en la base
+   Con ingreso/backend/scheduler aún detenidos, aplicar
+   [revoke-exposed-sessions.sql](revoke-exposed-sessions.sql) mediante `psql -X -q`
+   con `ON_ERROR_STOP`, en la base restaurada. Aplica la revocación acordada en la base
    que será autoridad, conservando filas/relaciones e historial. Verificar que los
-   tokens anteriores fallen y el nuevo login funcione; no registrar sus valores.
+   tokens anteriores fallen y un nuevo login/sesión funcione; no registrar sus
+   valores. Las cuentas existentes son de prueba según el usuario; no se necesita
+   recuperación individual ni cambiar sus hashes. Guardar un backup posterior
+   a la revocación: todo rollback debe conservarla.
 6. Iniciar imágenes ARM64 verificadas; probar nuevo login y datos históricos
    sin publicar tokens. Probar ingreso, API/WS y TLS del dominio por la ruta
    acordada. No ejecutar smoke de escritura contra datos reales sin marcar las
